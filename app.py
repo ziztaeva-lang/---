@@ -18,84 +18,87 @@ st.title("📄 SmartTest — БЖБ / ТЖБ")
 
 if menu == "Басты бет":
     st.write("Оқушы жұмыстарын тексеруге және мұғалімнің қорытынды бағасын бекітуге арналған жергілікті прототип.")
-    st.info("GPT-4o Vision, Excel/CSV экспорт және Графикалық аналитика функциялары қосылды.")
+    st.info("GPT-4o Vision, Excel/CSV экспорт, Статистика және Бірнеше жұмысты қатар жүктеу (Batch Processing) функциялары қосылды.")
     c1, c2 = st.columns(2)
     c1.metric("Мұғалім тексеруін күтуде", len(get_pending_results()))
     c2.metric("Бекітілген жұмыс", len(get_approved_results()))
 
 elif menu == "Жұмысты тексеру":
-    st.subheader("Жұмысты тіркеу және суретті ЖИ арқылы бағалау")
-    student_code = st.text_input("Анонимді оқушы коды", placeholder="Мысалы: ST-0001")
-    task_text = st.text_area("Тапсырма тақырыбы немесе сұрақ", placeholder="Мысалы: 1-БЖБ. Есепті шығарыңыз.")
+    st.subheader("Жұмыстарды тіркеу және ЖИ арқылы қатар бағалау (Batch Processing)")
+    
+    # Ортақ тапсырма және дескрипторлар
+    task_text = st.text_area("Тапсырма тақырыбы немесе сұрақ (барлығына ортақ)", placeholder="Мысалы: 1-БЖБ. Есепті шығарыңыз.")
     descriptors = st.text_area("Бағалау дескрипторлары", "1. Шартын дұрыс жазады (2 балл)\n2. Есептеулерді қатесіз орындайды (3 балл)")
     max_score = st.number_input("Ең жоғары ұпай", min_value=0.5, max_value=100.0, value=5.0, step=0.5)
     
-    uploaded_file = st.file_uploader("Оқушы жұмысының суретін жүктеу", type=["jpg", "jpeg", "png"])
+    # Бірнеше файлды қатар жүктеу мүмкіндігі
+    uploaded_files = st.file_uploader("Оқушылардың жұмыс суреттерін қатар жүктеу", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
     
-    ai_suggested_score = 0.0
-    ai_explanation = ""
-
-    if uploaded_file:
-        try:
-            image = Image.open(uploaded_file)
-            st.image(image, caption="Жүктелген оқушы жұмысы", use_container_width=True)
-            
-            def encode_uploaded_image(uploaded_file):
-                bytes_data = uploaded_file.getvalue()
-                return base64.b64encode(bytes_data).decode('utf-8')
-
-            if st.button("🔍 Суретті ЖИ (GPT-4o) арқылы оқып, талдау жасау"):
-                with st.spinner("ЖИ суретті оқып, жауапты тексеріп жатыр..."):
+    if uploaded_files:
+        st.success(f"Барлығы {len(uploaded_files)} жұмыс жүктелді. Әрқайсысын жеке өңдеңіз:")
+        
+        for idx, uploaded_file in enumerate(uploaded_files):
+            with st.expander(f"📁 Жұмыс №{idx+1}: {uploaded_file.name}"):
+                col_img, col_form = st.columns([1, 1])
+                
+                with col_img:
                     try:
-                        base64_image = encode_uploaded_image(uploaded_file)
-                        
-                        response = client.chat.completions.create(
-                            model="gpt-4o",
-                            messages=[
-                                {
-                                    "role": "system",
-                                    "content": "Сіз мектеп мұғалімісіз. Берілген дескрипторлар мен оқушының жұмыс суретін мұқият қарап шығып, орындалу барысын талдаңыз, әділ ұпай ұсыныңыз және түсіндірме беріңіз."
-                                },
-                                {
-                                    "role": "user",
-                                    "content": [
+                        image = Image.open(uploaded_file)
+                        st.image(image, caption=f"Жүктелген файл: {uploaded_file.name}", use_container_width=True)
+                    except Exception:
+                        st.error("Сурет файлын ашу мүмкін болмады.")
+                
+                with col_form:
+                    st_code = st.text_input(f"Анонимді оқушы коды", value=f"ST-000{idx+1}", key=f"code_{idx}")
+                    
+                    def encode_image(file_obj):
+                        bytes_data = file_obj.getvalue()
+                        return base64.b64encode(bytes_data).decode('utf-8')
+
+                    ai_score = 0.0
+                    ai_exp = "Бағаны мұғалім тексеруі қажет."
+
+                    if st.button(f"🔍 ЖИ (GPT-4o) арқылы талдау", key=f"ai_btn_{idx}"):
+                        with st.spinner("ЖИ суретті оқып жатыр..."):
+                            try:
+                                b64_img = encode_image(uploaded_file)
+                                response = client.chat.completions.create(
+                                    model="gpt-4o",
+                                    messages=[
                                         {
-                                            "type": "text",
-                                            "text": f"Тапсырма: {task_text}\nДескрипторлар: {descriptors}\nЕң жоғары ұпай: {max_score}"
+                                            "role": "system",
+                                            "content": "Сіз мектеп мұғалімісіз. Берілген дескрипторлар мен оқушының жұмыс суретін салыстырып, ұпай мен түсіндірме беріңіз."
                                         },
                                         {
-                                            "type": "image_url",
-                                            "image_url": {
-                                                "url": f"data:image/jpeg;base64,{base64_image}"
-                                            }
+                                            "role": "user",
+                                            "content": [
+                                                {"type": "text", "text": f"Тапсырма: {task_text}\nДескрипторлар: {descriptors}\nМакс ұпай: {max_score}"},
+                                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64_img}"}}
+                                            ]
                                         }
-                                    ]
-                                }
-                            ],
-                            max_tokens=500
-                        )
-                        ai_explanation = response.choices[0].message.content
-                        st.success("Сурет сәтті оқылып, ЖИ талдауы дайын болды!")
-                        st.write(ai_explanation)
-                    except Exception as e:
-                        st.error(f"ЖИ суретті оқу кезінде қате шықты: {e}")
-        except Exception:
-            st.error("Сурет файлын ашу мүмкін болмады.")
+                                    ],
+                                    max_tokens=400
+                                )
+                                ai_exp = response.choices[0].message.content
+                                st.success("Талдау дайын!")
+                                st.write(ai_exp)
+                            except Exception as e:
+                                st.error(f"Қате: {e}")
 
-    with st.form("save_pending_form"):
-        proposed_score = st.number_input("Алдын ала ұпай (мұғалім тексереді)", min_value=0.0, max_value=float(max_score), value=float(ai_suggested_score), step=0.5)
-        explanation = st.text_area("Түсіндірме", value=ai_explanation if ai_explanation else "Бағаны мұғалім тексеруі қажет.")
-        submitted = st.form_submit_button("Тексеруге сақтау")
-        if submitted:
-            if not student_code.strip():
-                st.error("Анонимді кодты енгізіңіз.")
-            else:
-                try:
-                    rid = save_pending_result(student_code.strip(), task_text.strip() or "Сурет түріндегі жұмыс", descriptors.strip(), float(proposed_score), float(max_score), explanation.strip())
-                    st.success("Жұмыс дерекқорға сақталды. Мұғалім бекітуін күтуде.")
-                    st.code(rid)
-                except Exception as e:
-                    st.error(f"Сақтау қатесі: {e}")
+                    with st.form(key=f"form_{idx}"):
+                        prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=float(ai_score), step=0.5, key=f"score_{idx}")
+                        explanation = st.text_area("Түсіндірме", value=ai_exp, key=f"exp_{idx}")
+                        submitted = st.form_submit_button("Тексеруге сақтау")
+                        
+                        if submitted:
+                            if not st_code.strip():
+                                st.error("Кодты енгізіңіз.")
+                            else:
+                                try:
+                                    save_pending_result(st_code.strip(), task_text.strip() or "Қатар жүктелген жұмыс", descriptors.strip(), float(prop_score), float(max_score), explanation.strip())
+                                    st.success(f"{st_code} жұмысы сәтті сақталды!")
+                                except Exception as e:
+                                    st.error(f"Сақтау қатесі: {e}")
 
 elif menu == "Мұғалім бекітуі":
     st.subheader("Мұғалімнің қорытынды бағасын бекіту")
@@ -189,31 +192,24 @@ elif menu == "Статистика":
         st.info("Әзірге статистика үшін бекітілген нәтижелер жоқ.")
     else:
         df = pd.DataFrame(rows)
-        
         total_works = len(df)
         avg_score = df['teacher_score'].mean()
         max_possible = df['max_score'].iloc[0] if total_works > 0 else 5.0
         
-        # Көрсеткіштер метрикасы
         col1, col2, col3 = st.columns(3)
         col1.metric("Бекітілген жұмыс саны", total_works)
         col2.metric("Орташа ұпай", f"{avg_score:.2f} / {max_possible}")
         
-        # Сәттілік пайызы (50%-дан жоғары алғандар)
         success_count = len(df[df['teacher_score'] >= (df['max_score'] * 0.5)])
         success_rate = (success_count / total_works) * 100 if total_works > 0 else 0
         col3.metric("Табыстылық көрсеткіші", f"{success_rate:.1f}%")
         
         st.markdown("---")
         st.write("### Оқушылардың ұпайлар бөлінісі (График)")
-        
-        # Графикалық аналитика үшін Streamlit бағандық диаграммасы
         chart_data = df.set_index('student_code')[['teacher_score']]
         st.bar_chart(chart_data)
-        
-        st.write("Бұл график әрбір анонимді оқушы коды бойынша жиналған қорытынды ұпайларды визуалды түрде көрсетеді.")
 
 elif menu == "Қауіпсіздік":
     st.subheader("Қауіпсіздік күйі")
     st.write("Дерекқор: компьютердегі data/smarttest.db")
-    st.write("Сыртқы ЖИ режимі: Қосулы (GPT-4o Vision арқылы суретті оқу қосылған)")
+    st.write("Сыртқы ЖИ режимі: Қосулы (GPT-4o Vision және Batch Processing қосылған)")
