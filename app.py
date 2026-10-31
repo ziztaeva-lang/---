@@ -13,12 +13,12 @@ init_db()
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.sidebar.title("SmartTest")
-menu = st.sidebar.selectbox("Бөлім", ["Басты бет", "Жұмысты тексеру", "Мұғалім бекітуі", "Нәтижелер", "Қауіпсіздік"])
+menu = st.sidebar.selectbox("Бөлім", ["Басты бет", "Жұмысты тексеру", "Мұғалім бекітуі", "Нәтижелер", "Статистика", "Қауіпсіздік"])
 st.title("📄 SmartTest — БЖБ / ТЖБ")
 
 if menu == "Басты бет":
     st.write("Оқушы жұмыстарын тексеруге және мұғалімнің қорытынды бағасын бекітуге арналған жергілікті прототип.")
-    st.info("GPT-4o Vision (Суретті оқу) және нәтижелерді Excel/CSV форматына экспорттау функциялары қосылды.")
+    st.info("GPT-4o Vision, Excel/CSV экспорт және Графикалық аналитика функциялары қосылды.")
     c1, c2 = st.columns(2)
     c1.metric("Мұғалім тексеруін күтуде", len(get_pending_results()))
     c2.metric("Бекітілген жұмыс", len(get_approved_results()))
@@ -134,10 +134,7 @@ elif menu == "Нәтижелер":
     if not rows:
         st.info("Әзірге бекітілген нәтиже жоқ.")
     else:
-        # --- EXCEL / CSV ЭКСПОРТТАУ ФУНКЦИЯСЫ ---
         df = pd.DataFrame(rows)
-        
-        # Экспортқа қажетті бағандарды сұрыптау және атын қазақшаға ауыстыру
         export_df = pd.DataFrame({
             "Оқушы коды": df.get("student_code", ""),
             "Тапсырма": df.get("task_text", ""),
@@ -148,15 +145,11 @@ elif menu == "Нәтижелер":
             "Ескертпе": df.get("teacher_comment", "")
         })
 
-        # Экспорт батырмаларын екі бағанға орналастыру
         col1, col2 = st.columns(2)
-        
         with col1:
-            # Excel (.xlsx) форматына түрлендіру
             buffer_excel = io.BytesIO()
             with pd.ExcelWriter(buffer_excel, engine='openpyxl') as writer:
                 export_df.to_excel(writer, index=False, sheet_name='Нәтижелер')
-            
             st.download_button(
                 label="📊 Excel (.xlsx) форматында жүктеу",
                 data=buffer_excel.getvalue(),
@@ -165,7 +158,6 @@ elif menu == "Нәтижелер":
             )
 
         with col2:
-            # CSV форматына түрлендіру (UTF-8 encoding)
             csv_data = export_df.to_csv(index=False).encode('utf-8-sig')
             st.download_button(
                 label="📄 CSV форматында жүктеу",
@@ -188,6 +180,38 @@ elif menu == "Нәтижелер":
                 st.write("Бекіткен мұғалім:", item["approved_by"])
                 st.write("Бекітілген уақыты:", item["approved_at"])
                 st.write("Ескертпе:", item["teacher_comment"] or "—")
+
+elif menu == "Статистика":
+    st.subheader("📊 Сыныптың статистикасы мен графикалық аналитикасы")
+    rows = get_approved_results()
+    
+    if not rows:
+        st.info("Әзірге статистика үшін бекітілген нәтижелер жоқ.")
+    else:
+        df = pd.DataFrame(rows)
+        
+        total_works = len(df)
+        avg_score = df['teacher_score'].mean()
+        max_possible = df['max_score'].iloc[0] if total_works > 0 else 5.0
+        
+        # Көрсеткіштер метрикасы
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Бекітілген жұмыс саны", total_works)
+        col2.metric("Орташа ұпай", f"{avg_score:.2f} / {max_possible}")
+        
+        # Сәттілік пайызы (50%-дан жоғары алғандар)
+        success_count = len(df[df['teacher_score'] >= (df['max_score'] * 0.5)])
+        success_rate = (success_count / total_works) * 100 if total_works > 0 else 0
+        col3.metric("Табыстылық көрсеткіші", f"{success_rate:.1f}%")
+        
+        st.markdown("---")
+        st.write("### Оқушылардың ұпайлар бөлінісі (График)")
+        
+        # Графикалық аналитика үшін Streamlit бағандық диаграммасы
+        chart_data = df.set_index('student_code')[['teacher_score']]
+        st.bar_chart(chart_data)
+        
+        st.write("Бұл график әрбір анонимді оқушы коды бойынша жиналған қорытынды ұпайларды визуалды түрде көрсетеді.")
 
 elif menu == "Қауіпсіздік":
     st.subheader("Қауіпсіздік күйі")
