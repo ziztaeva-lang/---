@@ -15,7 +15,7 @@ st.title("📄 SmartTest — БЖБ / ТЖБ")
 
 if menu == "Басты бет":
     st.write("Оқушы жұмыстарын тексеруге және мұғалімнің қорытынды бағасын бекітуге арналған жергілікті прототип.")
-    st.info("Сыртқы ЖИ көмегімен алдын ала бағалау қосылды.")
+    st.info("Сыртқы ЖИ көмегімен алдын ала бағалау және визуалды индикаторлар қосылды.")
     c1, c2 = st.columns(2)
     c1.metric("Мұғалім тексеруін күтуде", len(get_pending_results()))
     c2.metric("Бекітілген жұмыс", len(get_approved_results()))
@@ -44,7 +44,6 @@ elif menu == "Жұмысты тексеру":
         else:
             with st.spinner("ЖИ жұмысты талдап жатыр..."):
                 try:
-                    # client.chat.completions.create командасын қолдану
                     response = client.chat.completions.create(
                         model="gpt-4o",
                         messages=[
@@ -85,14 +84,22 @@ elif menu == "Мұғалім бекітуі":
     pending = get_pending_results()
     if not pending:
         st.info("Бекітуді күтіп тұрған жұмыс жоқ.")
+        
     for item in pending:
-        with st.expander(f"Жұмыс {item['student_code']} — {item['created_at']}"):
+        prop_score = item['proposed_score']
+        max_s = item['max_score']
+        # Алдын ала ұпайға қарай түс белгісін таңдау (50% немесе одан жоғары болса жасыл, төмен болса қызыл)
+        icon = "🟢" if prop_score >= (max_s * 0.5) else "🔴"
+        
+        with st.expander(f"{icon} Жұмыс: {item['student_code']} — Алдын ала ұпай: {prop_score} / {max_s} ({item['created_at']})"):
             st.write("Жауап/мәтін:", item["task_text"])
             st.write("Дескрипторлар:", item["descriptors"])
-            st.write("Алдын ала ұпай:", f"{item['proposed_score']} / {item['max_score']}")
+            st.write("Алдын ала ұпай:", f"**{prop_score} / {max_s}**")
             st.write("Түсіндірме:", item["explanation"])
-            score = st.number_input("Мұғалім бекітетін ұпай", min_value=0.0, max_value=float(item["max_score"]), value=float(item["proposed_score"]), step=0.5, key="score_" + item["id"])
+            
+            score = st.number_input("Мұғалім бекітетін ұпай", min_value=0.0, max_value=float(max_s), value=float(prop_score), step=0.5, key="score_" + item["id"])
             comment = st.text_area("Мұғалім ескертпесі", key="comment_" + item["id"])
+            
             if st.button("Бағаны бекіту", key="approve_" + item["id"]):
                 if not teacher_id.strip():
                     st.error("Мұғалім ID-ін енгізіңіз.")
@@ -109,13 +116,26 @@ elif menu == "Нәтижелер":
     rows = get_approved_results()
     if not rows:
         st.info("Әзірге бекітілген нәтиже жоқ.")
+        
     for item in rows:
-        with st.expander(f"{item['student_code']} — {item['teacher_score']} / {item['max_score']}"):
+        score = item['teacher_score']
+        max_s = item['max_score']
+        
+        # Ұпай деңгейіне қарай жасыл немесе қызыл белгі қою
+        if score >= (max_s * 0.5):
+            status_icon = "🟢"
+            status_text = "Тапсырма сәтті орындалды"
+        else:
+            status_icon = "🔴"
+            status_text = "Қосымша жұмыс қажет"
+
+        with st.expander(f"{status_icon} Оқушы: {item['student_code']} — {score} / {max_s} балл ({status_text})"):
             st.write("Жауап/мәтін:", item["task_text"])
             st.write("Дескрипторлар:", item["descriptors"])
-            st.write("Мұғалім бекіткен ұпай:", item["teacher_score"])
+            st.write("Мұғалім бекіткен ұпай:", f"**{score} / {max_s}**")
             st.write("Бекіткен мұғалім:", item["approved_by"])
             st.write("Бекітілген уақыты:", item["approved_at"])
+            st.write("Ескертпе:", item["teacher_comment"] or "—")
 
 elif menu == "Қауіпсіздік":
     st.subheader("Қауіпсіздік күйі")
