@@ -22,7 +22,6 @@ if not st.session_state.authenticated:
         login_submitted = st.form_submit_button("Кіру")
         
         if login_submitted:
-            # st.secrets ішінен құпия сөзді алу немесе әдепкі мәнді қолдану
             expected_password = st.secrets.get("TEACHER_PASSWORD", "smarttest2026")
             
             if password_input == expected_password:
@@ -32,7 +31,6 @@ if not st.session_state.authenticated:
             else:
                 st.error("Құпия сөз қате! Қайта көріңіз.")
     
-    # Жүйеге кірмеген жағдайда арғы жағы оқылмайды
     st.stop()
 
 # --- НЕГІЗГІ ҚОСЫМША (КІРГЕННЕН КЕЙІН) ---
@@ -41,7 +39,6 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 st.sidebar.title("SmartTest")
 menu = st.sidebar.selectbox("Бөлім", ["Басты бет", "Жұмысты тексеру", "Мұғалім бекітуі", "Нәтижелер", "Статистика", "Қауіпсіздік"])
 
-# Жүйеден шығу батырмасы
 if st.sidebar.button("🚪 Жүйеден шығу"):
     st.session_state.authenticated = False
     st.rerun()
@@ -50,7 +47,7 @@ st.title("📄 SmartTest — БЖБ / ТЖБ")
 
 if menu == "Басты бет":
     st.write("Оқушы жұмыстарын тексеруге және мұғалімнің қорытынды бағасын бекітуге арналған қауіпсіз платформа.")
-    st.info("Толыққанды кіру жүйесі (Authentication), GPT-4o Vision, Excel/CSV экспорт, Статистика және Кері байланыс функциялары қосылды.")
+    st.info("Дескриптор шаблондығы, Кіру жүйесі, GPT-4o Vision, Excel/CSV экспорт, Статистика және Кері байланыс функциялары қосылды.")
     c1, c2 = st.columns(2)
     c1.metric("Мұғалім тексеруін күтуде", len(get_pending_results()))
     c2.metric("Бекітілген жұмыс", len(get_approved_results()))
@@ -58,8 +55,20 @@ if menu == "Басты бет":
 elif menu == "Жұмысты тексеру":
     st.subheader("Жұмыстарды тіркеу және ЖИ арқылы кері байланыспен бағалау")
     
+    # --- ДЕСКРИПТОР ШАБЛОНДАРЫ ---
+    descriptor_templates = {
+        "Таңдаңыз немесе өзгертіңіз...": "",
+        "1-БЖБ: Ақпараттық этикет (1-сынып)": "1. Ақпараттың маңыздылығын түсіндіреді (2 балл)\n2. Қауіпсіздік ережелерін мысалдар арқылы көрсетеді (3 балл)",
+        "БЖБ: Scratch ортасымен жұмыс (5-сынып)": "1. Спрайтты дұрыс қосады және баптау жасайды (2 балл)\n2. Қозғалыс скриптін қатесіз құрастырады (3 балл)",
+        "ТЖБ: Растрлық графика (6-сынып)": "1. Графикалық редактордың құралдарын дұрыс пайдаланады (2 балл)\n2. Суретті өңдеу сапасы мен шығармашылық көзқарас (3 балл)",
+        "Стандартты математикалық есеп": "1. Есептің шартын дұрыс жазады (2 балл)\n2. Формуланы қолданып есептеулерді қатесіз орындайды (3 балл)"
+    }
+    
+    selected_template = st.selectbox("📌 Дайын дескриптор шаблонын таңдау", list(descriptor_templates.keys()))
+    default_desc_value = descriptor_templates[selected_template] if selected_template != "Таңдаңыз немесе өзгертіңіз..." else "1. Шартын дұрыс жазады (2 балл)\n2. Есептеулерді қатесіз орындайды (3 балл)"
+
     task_text = st.text_area("Тапсырма тақырыбы немесе сұрақ (барлығына ортақ)", placeholder="Мысалы: 1-БЖБ. Есепті шығарыңыз.")
-    descriptors = st.text_area("Бағалау дескрипторлары", "1. Шартын дұрыс жазады (2 балл)\n2. Есептеулерді қатесіз орындайды (3 балл)")
+    descriptors = st.text_area("Бағалау дескрипторлары", value=default_desc_value)
     max_score = st.number_input("Ең жоғары ұпай", min_value=0.5, max_value=100.0, value=5.0, step=0.5)
     
     uploaded_files = st.file_uploader("Оқушылардың жұмыс суреттерін қатар жүктеу", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
@@ -246,4 +255,4 @@ elif menu == "Статистика":
 elif menu == "Қауіпсіздік":
     st.subheader("Қауіпсіздік күйі")
     st.write("Дерекқор: компьютердегі data/smarttest.db")
-    st.write("Сыртқы ЖИ режимі: Қосулы (Толыққанды кіру жүйесі және басқа да функциялар қосылған)")
+    st.write("Сыртқы ЖИ режимі: Қосулы (Шаблондар, Кіру жүйесі және Vision OCR қосылған)")
