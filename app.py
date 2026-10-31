@@ -9,16 +9,48 @@ from security_layer import init_db, save_pending_result, get_pending_results, ap
 st.set_page_config(page_title="SmartTest БЖБ–ТЖБ", layout="wide")
 init_db()
 
-# Streamlit secrets арқылы OpenAI клиентін баптау
+# --- АУТЕНТИФИКАЦИЯ (КІРУ ЖҮЙЕСІ) ---
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.title("🔐 SmartTest — Мұғалімнің жеке кабинетіне кіру")
+    st.write("Платформаға кіру үшін мұғалімнің құпия сөзін енгізіңіз.")
+    
+    with st.form("login_form"):
+        password_input = st.text_input("Құпия сөз (Password)", type="password", placeholder="Құпия сөзді енгізіңіз...")
+        login_submitted = st.form_submit_button("Кіру")
+        
+        if login_submitted:
+            # st.secrets ішінен құпия сөзді алу немесе әдепкі мәнді қолдану
+            expected_password = st.secrets.get("TEACHER_PASSWORD", "smarttest2026")
+            
+            if password_input == expected_password:
+                st.session_state.authenticated = True
+                st.success("Жүйеге сәтті кірдіңіз!")
+                st.rerun()
+            else:
+                st.error("Құпия сөз қате! Қайта көріңіз.")
+    
+    # Жүйеге кірмеген жағдайда арғы жағы оқылмайды
+    st.stop()
+
+# --- НЕГІЗГІ ҚОСЫМША (КІРГЕННЕН КЕЙІН) ---
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.sidebar.title("SmartTest")
 menu = st.sidebar.selectbox("Бөлім", ["Басты бет", "Жұмысты тексеру", "Мұғалім бекітуі", "Нәтижелер", "Статистика", "Қауіпсіздік"])
+
+# Жүйеден шығу батырмасы
+if st.sidebar.button("🚪 Жүйеден шығу"):
+    st.session_state.authenticated = False
+    st.rerun()
+
 st.title("📄 SmartTest — БЖБ / ТЖБ")
 
 if menu == "Басты бет":
-    st.write("Оқушы жұмыстарын тексеруге және мұғалімнің қорытынды бағасын бекітуге арналған жергілікті прототип.")
-    st.info("GPT-4o Vision, Excel/CSV экспорт, Статистика, Batch Processing және Оқушыға арналған жеке кері байланыс (Feedback) функциялары қосылды.")
+    st.write("Оқушы жұмыстарын тексеруге және мұғалімнің қорытынды бағасын бекітуге арналған қауіпсіз платформа.")
+    st.info("Толыққанды кіру жүйесі (Authentication), GPT-4o Vision, Excel/CSV экспорт, Статистика және Кері байланыс функциялары қосылды.")
     c1, c2 = st.columns(2)
     c1.metric("Мұғалім тексеруін күтуде", len(get_pending_results()))
     c2.metric("Бекітілген жұмыс", len(get_approved_results()))
@@ -214,4 +246,4 @@ elif menu == "Статистика":
 elif menu == "Қауіпсіздік":
     st.subheader("Қауіпсіздік күйі")
     st.write("Дерекқор: компьютердегі data/smarttest.db")
-    st.write("Сыртқы ЖИ режимі: Қосулы (GPT-4o Vision және Оқушыға кері байланыс қосылған)")
+    st.write("Сыртқы ЖИ режимі: Қосулы (Толыққанды кіру жүйесі және басқа да функциялар қосылған)")
