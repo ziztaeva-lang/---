@@ -1,6 +1,8 @@
 import streamlit as st
 from PIL import Image
 import base64
+import pandas as pd
+import io
 from openai import OpenAI
 from security_layer import init_db, save_pending_result, get_pending_results, approve_result, get_approved_results, external_ai_is_enabled
 
@@ -12,11 +14,11 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.sidebar.title("SmartTest")
 menu = st.sidebar.selectbox("Бөлім", ["Басты бет", "Жұмысты тексеру", "Мұғалім бекітуі", "Нәтижелер", "Қауіпсіздік"])
-st.title("📄 SmartTest — БЖБ / ТЖБ (Суретті оқу қосылған)")
+st.title("📄 SmartTest — БЖБ / ТЖБ")
 
 if menu == "Басты бет":
     st.write("Оқушы жұмыстарын тексеруге және мұғалімнің қорытынды бағасын бекітуге арналған жергілікті прототип.")
-    st.info("GPT-4o Vision (Суретті оқу) арқылы автоматты талдау қосылды.")
+    st.info("GPT-4o Vision (Суретті оқу) және нәтижелерді Excel/CSV форматына экспорттау функциялары қосылды.")
     c1, c2 = st.columns(2)
     c1.metric("Мұғалім тексеруін күтуде", len(get_pending_results()))
     c2.metric("Бекітілген жұмыс", len(get_approved_results()))
@@ -38,7 +40,6 @@ elif menu == "Жұмысты тексеру":
             image = Image.open(uploaded_file)
             st.image(image, caption="Жүктелген оқушы жұмысы", use_container_width=True)
             
-            # Суретті base64 форматына түрлендіру функциясы
             def encode_uploaded_image(uploaded_file):
                 bytes_data = uploaded_file.getvalue()
                 return base64.b64encode(bytes_data).decode('utf-8')
@@ -132,19 +133,61 @@ elif menu == "Нәтижелер":
     rows = get_approved_results()
     if not rows:
         st.info("Әзірге бекітілген нәтиже жоқ.")
+    else:
+        # --- EXCEL / CSV ЭКСПОРТТАУ ФУНКЦИЯСЫ ---
+        df = pd.DataFrame(rows)
         
-    for item in rows:
-        score = item['teacher_score']
-        max_s = item['max_score']
-        status_icon = "🟢" if score >= (max_s * 0.5) else "🔴"
-        status_text = "Тапсырма сәтті орындалды" if score >= (max_s * 0.5) else "Қосымша жұмыс қажет"
+        # Экспортқа қажетті бағандарды сұрыптау және атын қазақшаға ауыстыру
+        export_df = pd.DataFrame({
+            "Оқушы коды": df.get("student_code", ""),
+            "Тапсырма": df.get("task_text", ""),
+            "Бекітілген ұпай": df.get("teacher_score", ""),
+            "Максималды ұпай": df.get("max_score", ""),
+            "Бекіткен мұғалім": df.get("approved_by", ""),
+            "Уақыты": df.get("approved_at", ""),
+            "Ескертпе": df.get("teacher_comment", "")
+        })
 
-        with st.expander(f"{status_icon} Оқушы: {item['student_code']} — {score} / {max_s} балл ({status_text})"):
-            st.write("Мәтіні/Тапсырма:", item["task_text"])
-            st.write("Мұғалім бекіткен ұпай:", f"**{score} / {max_s}**")
-            st.write("Бекіткен мұғалім:", item["approved_by"])
-            st.write("Бекітілген уақыты:", item["approved_at"])
-            st.write("Ескертпе:", item["teacher_comment"] or "—")
+        # Экспорт батырмаларын екі бағанға орналастыру
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Excel (.xlsx) форматына түрлендіру
+            buffer_excel = io.BytesIO()
+            with pd.ExcelWriter(buffer_excel, engine='openpyxl') as writer:
+                export_df.to_excel(writer, index=False, sheet_name='Нәтижелер')
+            
+            st.download_button(
+                label="📊 Excel (.xlsx) форматында жүктеу",
+                data=buffer_excel.getvalue(),
+                file_name="SmartTest_results.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+        with col2:
+            # CSV форматына түрлендіру (UTF-8 encoding)
+            csv_data = export_df.to_csv(index=False).encode('utf-8-sig')
+            st.download_button(
+                label="📄 CSV форматында жүктеу",
+                data=csv_data,
+                file_name="SmartTest_results.csv",
+                mime="text/csv"
+            )
+
+        st.markdown("---")
+
+        for item in rows:
+            score = item['teacher_score']
+            max_s = item['max_score']
+            status_icon = "🟢" if score >= (max_s * 0.5) else "🔴"
+            status_text = "Тапсырма сәтті орындалды" if score >= (max_s * 0.5) else "Қосымша жұмыс қажет"
+
+            with st.expander(f"{status_icon} Оқушы: {item['student_code']} — {score} / {max_s} балл ({status_text})"):
+                st.write("Мәтіні/Тапсырма:", item["task_text"])
+                st.write("Мұғалім бекіткен ұпай:", f"**{score} / {max_s}**")
+                st.write("Бекіткен мұғалім:", item["approved_by"])
+                st.write("Бекітілген уақыты:", item["approved_at"])
+                st.write("Ескертпе:", item["teacher_comment"] or "—")
 
 elif menu == "Қауіпсіздік":
     st.subheader("Қауіпсіздік күйі")
