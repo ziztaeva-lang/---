@@ -146,4 +146,125 @@ elif menu == "Жұмысты тексеру":
             "desc": "1. ЖИ модельдерінің жұмыс істеу принципін сипаттайды (2 балл);\n2. Берілген кесте деректеріне талдау жасап, қорытынды ұсынады (3 балл)."
         },
         ("7-сынып", "Математика / Алгебра", "3-тоқсан"): {
-            "task": "7-сынып. 3-тоқсан. БЖБ. «Фу
+            "task": "7-сынып. 3-тоқсан. БЖБ. «Функция. Сызықтық функция».",
+            "desc": "1. Сызықтық функцияның графигін салады (2 балл);\n2. График арқылы айнымалылардың мәнін анықтайды (3 балл)."
+        },
+
+        # 4-тоқсан мысалдары
+        ("7-сынып", "Математика / Алгебра", "4-тоқсан"): {
+            "task": "7-сынып. 4-тоқсан. ТЖБ. «Жылдық тоқсандық жиынтық бағалау».",
+            "desc": "1. Өрнектерді түрлендіру және теңдеулерді шешу дағдыларын көрсетеді (3 балл);\n2. Мәтінді есептерді жүйелі түрде талдап шығарады (4 балл);\n3. Функция графиктерін дұрыс салып, зерттейді (3 балл)."
+        }
+    }
+
+    # Нақты комбинацияны іздеу (Сынып, Пән, Тоқсан)
+    key_tuple = (selected_grade, selected_subject, selected_term)
+    default_data = auto_content_db.get(
+        key_tuple, 
+        {
+            "task": f"{selected_grade}. {selected_term}. {selected_subject} пәні бойынша {prefix_text} стандарты тапсырмасы.",
+            "desc": "1. Тапсырма шартын толық түсініп, талапқа сай орындайды (2 балл);\n2. Жауабын жүйелі түрде негіздеп, қатесіз жазады (3 балл)."
+        }
+    )
+
+    # --- АВТОМАТТЫ ЖӘНЕ ӨҢДЕЛетін ӨРІСТЕР ---
+    task_text = st.text_area("Тапсырма тақырыбы немесе сұрақ (Автоматты түрде шығады, қажет болса өңдеңіз)", value=default_data["task"])
+    descriptors = st.text_area("Бағалау дескрипторлары (Спецификация бойынша автоматты шығады)", value=default_data["desc"])
+    max_score = st.number_input("Ең жоғары ұпай", min_value=0.5, max_value=100.0, value=5.0, step=0.5)
+    
+    uploaded_files = st.file_uploader(f"[{selected_term} | {prefix_text} | {selected_grade} - {selected_subject}] Оқушылардың жұмыс суреттерін жүктеу", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+    
+    if uploaded_files:
+        st.success(f"Барлығы {len(uploaded_files)} жұмыс жүктелді. Әрқайсысын жеке өңдеңіз:")
+        
+        for idx, uploaded_file in enumerate(uploaded_files):
+            with st.expander(f"📁 [{selected_term} | {prefix_text} | {selected_grade}] Жұмыс №{idx+1}: {uploaded_file.name}"):
+                col_img, col_form = st.columns([1, 1])
+                
+                with col_img:
+                    try:
+                        image = Image.open(uploaded_file)
+                        st.image(image, caption=f"Жүктелген файл: {uploaded_file.name}", use_container_width=True)
+                    except Exception:
+                        st.error("Сурет файлын ашу мүмкін болмады.")
+                
+                with col_form:
+                    st_code = st.text_input(f"Анонимді оқушы коды", value=f"{selected_grade}-0{idx+1}", key=f"code_{idx}")
+                    
+                    def encode_image(file_obj):
+                        bytes_data = file_obj.getvalue()
+                        return base64.b64encode(bytes_data).decode('utf-8')
+
+                    ai_exp = "Бағаны мұғалім тексеруі қажет."
+
+                    if st.button(f"🔍 ЖИ (GPT-4o) арқылы талдау", key=f"ai_btn_{idx}"):
+                        with st.spinner("ЖИ суретті оқып, кері байланыс дайындап жатыр..."):
+                            try:
+                                b64_img = encode_image(uploaded_file)
+                                response = client.chat.completions.create(
+                                    model="gpt-4o",
+                                    messages=[
+                                        {
+                                            "role": "system",
+                                            "content": (
+                                                "Сіз тәжірибелі мектеп мұғалімісіз. Берілген дескрипторлар мен оқушының жұмыс суретін салыстырып, мына форматта жауап беріңіз:\n"
+                                                "1. **Ұпай мен талдау**: Ұсынылатын ұпай және мұғалімге қысқаша түсіндірме.\n"
+                                                "2. **Оқушыға арналған кері байланыс (Feedback)**: Оқушыға тікелей арналған (жылы, ынталандырушы түрде): "
+                                                "не нәрсе өте жақсы шықты, қандай қате кетті және келесі жолы неге көңіл бөлу керектігі туралы нақты әрі түсінікті кеңес."
+                                            )
+                                        },
+                                        {
+                                            "role": "user",
+                                            "content": [
+                                                {"type": "text", "text": f"Тоқсан: {selected_term}, Түрі: {assessment_type}, Сынып: {selected_grade}, Пән: {selected_subject}\nТапсырма: {task_text}\nДескрипторлар: {descriptors}\nМакс ұпай: {max_score}"},
+                                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64_img}"}}
+                                            ]
+                                        }
+                                    ],
+                                    max_tokens=600
+                                )
+                                ai_exp = response.choices[0].message.content
+                                st.success("Талдау мен жеке кері байланыс дайын!")
+                                st.write(ai_exp)
+                            except Exception as e:
+                                st.error(f"Қате: {e}")
+
+                    with st.form(key=f"form_{idx}"):
+                        prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=0.0, step=0.5, key=f"score_{idx}")
+                        explanation = st.text_area("Түсіндірме және оқушыға кері байланыс", value=ai_exp, key=f"exp_{idx}")
+                        submitted = st.form_submit_button("Тексеруге сақтау")
+                        
+                        if submitted:
+                            if not st_code.strip():
+                                st.error("Кодты енгізіңіз.")
+                            else:
+                                try:
+                                    full_task_info = f"[{selected_term} | {prefix_text} | {selected_grade} - {selected_subject}] {task_text.strip()}"
+                                    save_pending_result(st_code.strip(), full_task_info, descriptors.strip(), float(prop_score), float(max_score), explanation.strip())
+                                    st.success(f"{st_code} жұмысы сәтті сақталды!")
+                                except Exception as e:
+                                    st.error(f"Сақтау қатесі: {e}")
+
+elif menu == "Мұғалім бекітуі":
+    st.subheader("Мұғалімнің қорытынды бағасын бекіту")
+    teacher_id = st.text_input("Мұғалімнің ішкі ID-і", placeholder="Мысалы: TEACHER-01")
+    pending = get_pending_results()
+    if not pending:
+        st.info("Бекітуді күтіп тұрған жұмыс жоқ.")
+        
+    for item in pending:
+        prop_score = item['proposed_score']
+        max_s = item['max_score']
+        icon = "🟢" if prop_score >= (max_s * 0.5) else "🔴"
+        
+        with st.expander(f"{icon} Жұмыс: {item['student_code']} — Алдын ала ұпай: {prop_score} / {max_s} ({item['created_at']})"):
+            st.write("Тапсырма/мәтін:", item["task_text"])
+            st.write("Дескрипторлар:", item["descriptors"])
+            st.write("ЖИ талдауы және кері байланыс:", item["explanation"])
+            
+            score = st.number_input("Мұғалім бекітетін ұпай", min_value=0.0, max_value=float(max_s), value=float(prop_score), step=0.5, key="score_" + item["id"])
+            comment = st.text_area("Мұғалімнің қосымша ескертпесі", key="comment_" + item["id"])
+            
+            if st.button("Бағаны бекіту", key="approve_" + item["id"]):
+                if not teacher_id.strip():
+                    st.error("Мұғалім ID-ін енгізі
