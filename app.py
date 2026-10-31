@@ -47,7 +47,7 @@ st.title("📄 SmartTest — БЖБ / ТЖБ (Тоқсандар бойынша 
 
 if menu == "Басты бет":
     st.write("Оқушы жұмыстарын тексеруге және мұғалімнің қорытынды бағасын бекітуге арналған қауіпсіз платформа.")
-    st.info("5-сынып Қазақ тілі пәнінің 1-тоқсандық БЖБ/ТЖБ кестесі автоматты базаға қосылды[cite: 6].")
+    st.info("5 және 6-сыныптардың Қазақ тілі пәніне арналған 1-тоқсандық БЖБ/ТЖБ кестелері толық қосылды[cite: 6, 7].")
     c1, c2 = st.columns(2)
     c1.metric("Мұғалім тексеруін күтуде", len(get_pending_results()))
     c2.metric("Бекітілген жұмыс", len(get_approved_results()))
@@ -91,13 +91,14 @@ elif menu == "Жұмысты тексеру":
 
     prefix_text = "БЖБ" if "БЖБ" in assessment_type else "ТЖБ"
 
-    # Егер БЖБ таңдалса, қай БЖБ екенін қосымша нақтылау үшін selectbox қосамыз
+    # БЖБ нөмірін таңдау логикасы (5 және 6-сыныптар үшін)
     bzhb_sub_num = ""
-    if prefix_text == "БЖБ" and selected_grade == "5-сынып" and selected_subject == "Қазақ тілі" and selected_term == "1-тоқсан":
+    if prefix_text == "БЖБ" and selected_grade in ["5-сынып", "6-сынып"] and selected_subject == "Қазақ тілі" and selected_term == "1-тоқсан":
         bzhb_sub_num = st.selectbox("📌 БЖБ нөмірін таңдаңыз:", ["БЖБ 1", "БЖБ 2", "БЖБ 3"])
 
-    # --- ТОҚСАН ЖӘНЕ ПӘН БОЙЫНША АВТОМАТТЫ СПЕЦИФИКАЦИЯ БАЗАСЫ (5-сынып Қазақ тілі, 1-тоқсан) ---
+    # --- ТОҚСАН ЖӘНЕ ПӘН БОЙЫНША АВТОМАТТЫ СПЕЦИФИКАЦИЯ БАЗАСЫ ---
     auto_content_db = {
+        # 5-сынып Қазақ тілі (1-тоқсан)
         ("5-сынып", "Қазақ тілі", "1-тоқсан", "БЖБ 1"): {
             "task": "5-сынып. 1-тоқсан. БЖБ 1. «Мәдениет: тіл және қарым-қатынас. Фонетика».",
             "desc": "1. Тілдік бірліктерді коммуникативті жағдаятқа сай қолданады (2 балл);\n2. Фонетикалық ерекшеліктерді ажыратып, дұрыс талдайды (3 балл)."
@@ -113,10 +114,27 @@ elif menu == "Жұмысты тексеру":
         ("5-сынып", "Қазақ тілі", "1-тоқсан", "ТЖБ"): {
             "task": "5-сынып. 1-тоқсан. ТЖБ. «Тоқсанның барлық бөлімі бойынша жиынтық бағалау».",
             "desc": "1. Тыңдалған/оқылған мәтіннің негізгі идеясын түсінеді (3 балл);\n2. Тілдік нормаларды сақтап, сауатты жазады (4 балл);\n3. Лексика-грамматикалық тапсырмаларды орындайды (3 балл)."
+        },
+
+        # 6-сынып Қазақ тілі (1-тоқсан)[cite: 7]
+        ("6-сынып", "Қазақ тілі", "1-тоқсан", "БЖБ 1"): {
+            "task": "6-сынып. 1-тоқсан. БЖБ 1. «Қазақстандағы көрікті жерлер. Лексикография».",
+            "desc": "1. Мәтіннен қажетті ақпаратты тауып, мағынасын ашады (2 балл);\n2. Сөздіктермен (лексикография) жұмыс жасай біледі (3 балл)."
+        },
+        ("6-сынып", "Қазақ тілі", "1-тоқсан", "БЖБ 2"): {
+            "task": "6-сынып. 1-тоқсан. БЖБ 2. «Ұлттық және отбасылық құндылықтар. Фонетика».",
+            "desc": "1. Отбасылық құндылықтар тақырыбындағы ойды жүйелейді (2 балл);\n2. Фонетикалық нормаларды сақтап жазады (3 балл)."
+        },
+        ("6-сынып", "Қазақ тілі", "1-тоқсан", "БЖБ 3"): {
+            "task": "6-сынып. 1-тоқсан. БЖБ 3. «Әлемнің жеті кереметі. Лексикография».",
+            "desc": "1. Әлемнің жеті кереметі туралы мәліметтерді талдайды (2 балл);\n2. Лексикографиялық деректерді орынды қолданады (3 балл)."
+        },
+        ("6-сынып", "Қазақ тілі", "1-тоқсан", "ТЖБ"): {
+            "task": "6-сынып. 1-тоқсан. ТЖБ. «Тоқсанның барлық бөлімі бойынша жиынтық бағалау».",
+            "desc": "1. Берілген мәтін бойынша логикалық сұрақтарға жауап береді (3 балл);\n2. Лексикалық және фонетикалық ережелерді қолданады (4 балл);\n3. Сауатты әрі жүйелі түрде жауап жазады (3 балл)."
         }
     }
 
-    # Кілтті құрастыру (БЖБ болса нөмірімен, ТЖБ болса тікелей)
     lookup_key = (selected_grade, selected_subject, selected_term, bzhb_sub_num if prefix_text == "БЖБ" else "ТЖБ")
     
     default_data = auto_content_db.get(
@@ -245,75 +263,4 @@ elif menu == "Нәтижелер":
         export_df = pd.DataFrame({
             "Оқушы коды": df.get("student_code", ""),
             "Тапсырма": df.get("task_text", ""),
-            "Бекітілген ұпай": df.get("teacher_score", ""),
-            "Максималды ұпай": df.get("max_score", ""),
-            "Бекіткен мұғалім": df.get("approved_by", ""),
-            "Уақыты": df.get("approved_at", ""),
-            "Кері байланыс/Ескертпе": df.get("teacher_comment", "")
-        })
-
-        col1, col2 = st.columns(2)
-        with col1:
-            buffer_excel = io.BytesIO()
-            with pd.ExcelWriter(buffer_excel, engine='openpyxl') as writer:
-                export_df.to_excel(writer, index=False, sheet_name='Нәтижелер')
-            st.download_button(
-                label="📊 Excel (.xlsx) форматында жүктеу",
-                data=buffer_excel.getvalue(),
-                file_name="SmartTest_results.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-
-        with col2:
-            csv_data = export_df.to_csv(index=False).encode('utf-8-sig')
-            st.download_button(
-                label="📄 CSV форматында жүктеу",
-                data=csv_data,
-                file_name="SmartTest_results.csv",
-                mime="text/csv"
-            )
-
-        st.markdown("---")
-
-        for item in rows:
-            score = item['teacher_score']
-            max_s = item['max_score']
-            status_icon = "🟢" if score >= (max_s * 0.5) else "🔴"
-            status_text = "Тапсырма сәтті орындалды" if score >= (max_s * 0.5) else "Қосымша жұмыс қажет"
-
-            with st.expander(f"{status_icon} Оқушы: {item['student_code']} — {score} / {max_s} балл ({status_text})"):
-                st.write("Мәтіні/Тапсырма:", item["task_text"])
-                st.write("Мұғалім бекіткен ұпай:", f"**{score} / {max_s}**")
-                st.write("Кері байланыс / Түсіндірме:", item["explanation"])
-                st.write("Мұғалім ескертпесі:", item["teacher_comment"] or "—")
-                st.write("Бекіткен мұғалім:", item["approved_by"], f"({item['approved_at']})")
-
-elif menu == "Статистика":
-    st.subheader("📊 Сыныптың статистикасы мен графикалық аналитикасы")
-    rows = get_approved_results()
-    
-    if not rows:
-        st.info("Әзірге статистика үшін бекітілген нәтижелер жоқ.")
-    else:
-        df = pd.DataFrame(rows)
-        total_works = len(df)
-        avg_score = df['teacher_score'].mean()
-        max_possible = df['max_score'].iloc[0] if total_works > 0 else 5.0
-        
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Бекітілген жұмыс саны", total_works)
-        col2.metric("Орташа ұпай", f"{avg_score:.2f} / {max_possible}")
-        
-        success_count = len(df[df['teacher_score'] >= (df['max_score'] * 0.5)])
-        success_rate = (success_count / total_works) * 100 if total_works > 0 else 0
-        col3.metric("Табыстылық көрсеткіші", f"{success_rate:.1f}%")
-        
-        st.markdown("---")
-        st.write("### Оқушылардың ұпайлар бөлінісі (График)")
-        chart_data = df.set_index('student_code')[['teacher_score']]
-        st.bar_chart(chart_data)
-
-elif menu == "Қауіпсіздік":
-    st.subheader("Қауіпсіздік күйі")
-    st.write("Дерекқор: компьютердегі data/smarttest.db")
-    st.write("Сыртқы ЖИ режимі: Қосулы (5-сынып Қазақ тілі БЖБ-1,2,3 және ТЖБ тақырыптары қосылды)")
+            "Б
