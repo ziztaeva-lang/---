@@ -18,20 +18,18 @@ st.title("📄 SmartTest — БЖБ / ТЖБ")
 
 if menu == "Басты бет":
     st.write("Оқушы жұмыстарын тексеруге және мұғалімнің қорытынды бағасын бекітуге арналған жергілікті прототип.")
-    st.info("GPT-4o Vision, Excel/CSV экспорт, Статистика және Бірнеше жұмысты қатар жүктеу (Batch Processing) функциялары қосылды.")
+    st.info("GPT-4o Vision, Excel/CSV экспорт, Статистика, Batch Processing және Оқушыға арналған жеке кері байланыс (Feedback) функциялары қосылды.")
     c1, c2 = st.columns(2)
     c1.metric("Мұғалім тексеруін күтуде", len(get_pending_results()))
     c2.metric("Бекітілген жұмыс", len(get_approved_results()))
 
 elif menu == "Жұмысты тексеру":
-    st.subheader("Жұмыстарды тіркеу және ЖИ арқылы қатар бағалау (Batch Processing)")
+    st.subheader("Жұмыстарды тіркеу және ЖИ арқылы кері байланыспен бағалау")
     
-    # Ортақ тапсырма және дескрипторлар
     task_text = st.text_area("Тапсырма тақырыбы немесе сұрақ (барлығына ортақ)", placeholder="Мысалы: 1-БЖБ. Есепті шығарыңыз.")
     descriptors = st.text_area("Бағалау дескрипторлары", "1. Шартын дұрыс жазады (2 балл)\n2. Есептеулерді қатесіз орындайды (3 балл)")
     max_score = st.number_input("Ең жоғары ұпай", min_value=0.5, max_value=100.0, value=5.0, step=0.5)
     
-    # Бірнеше файлды қатар жүктеу мүмкіндігі
     uploaded_files = st.file_uploader("Оқушылардың жұмыс суреттерін қатар жүктеу", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
     
     if uploaded_files:
@@ -55,11 +53,10 @@ elif menu == "Жұмысты тексеру":
                         bytes_data = file_obj.getvalue()
                         return base64.b64encode(bytes_data).decode('utf-8')
 
-                    ai_score = 0.0
                     ai_exp = "Бағаны мұғалім тексеруі қажет."
 
-                    if st.button(f"🔍 ЖИ (GPT-4o) арқылы талдау", key=f"ai_btn_{idx}"):
-                        with st.spinner("ЖИ суретті оқып жатыр..."):
+                    if st.button(f"🔍 ЖИ (GPT-4o) арқылы талдау және кері байланыс алу", key=f"ai_btn_{idx}"):
+                        with st.spinner("ЖИ суретті оқып, кері байланыс дайындап жатыр..."):
                             try:
                                 b64_img = encode_image(uploaded_file)
                                 response = client.chat.completions.create(
@@ -67,7 +64,12 @@ elif menu == "Жұмысты тексеру":
                                     messages=[
                                         {
                                             "role": "system",
-                                            "content": "Сіз мектеп мұғалімісіз. Берілген дескрипторлар мен оқушының жұмыс суретін салыстырып, ұпай мен түсіндірме беріңіз."
+                                            "content": (
+                                                "Сіз тәжірибелі мектеп мұғалімісіз. Берілген дескрипторлар мен оқушының жұмыс суретін салыстырып, мына форматта жауап беріңіз:\n"
+                                                "1. **Ұпай мен талдау**: Ұсынылатын ұпай және мұғалімге қысқаша түсіндірме.\n"
+                                                "2. **Оқушыға арналған кері байланыс (Feedback)**: Оқушыға тікелей арналған (жылы, ынталандырушы түрде): "
+                                                "не нәрсе өте жақсы шықты, қандай қате кетті және келесі жолы неге көңіл бөлу керектігі туралы нақты әрі түсінікті кеңес."
+                                            )
                                         },
                                         {
                                             "role": "user",
@@ -77,17 +79,17 @@ elif menu == "Жұмысты тексеру":
                                             ]
                                         }
                                     ],
-                                    max_tokens=400
+                                    max_tokens=600
                                 )
                                 ai_exp = response.choices[0].message.content
-                                st.success("Талдау дайын!")
+                                st.success("Талдау мен жеке кері байланыс дайын!")
                                 st.write(ai_exp)
                             except Exception as e:
                                 st.error(f"Қате: {e}")
 
                     with st.form(key=f"form_{idx}"):
-                        prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=float(ai_score), step=0.5, key=f"score_{idx}")
-                        explanation = st.text_area("Түсіндірме", value=ai_exp, key=f"exp_{idx}")
+                        prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=0.0, step=0.5, key=f"score_{idx}")
+                        explanation = st.text_area("Түсіндірме және оқушыға кері байланыс", value=ai_exp, key=f"exp_{idx}")
                         submitted = st.form_submit_button("Тексеруге сақтау")
                         
                         if submitted:
@@ -96,7 +98,7 @@ elif menu == "Жұмысты тексеру":
                             else:
                                 try:
                                     save_pending_result(st_code.strip(), task_text.strip() or "Қатар жүктелген жұмыс", descriptors.strip(), float(prop_score), float(max_score), explanation.strip())
-                                    st.success(f"{st_code} жұмысы сәтті сақталды!")
+                                    st.success(f"{st_code} жұмысы кері байланысымен бірге сәтті сақталды!")
                                 except Exception as e:
                                     st.error(f"Сақтау қатесі: {e}")
 
@@ -115,10 +117,10 @@ elif menu == "Мұғалім бекітуі":
         with st.expander(f"{icon} Жұмыс: {item['student_code']} — Алдын ала ұпай: {prop_score} / {max_s} ({item['created_at']})"):
             st.write("Тапсырма/мәтін:", item["task_text"])
             st.write("Дескрипторлар:", item["descriptors"])
-            st.write("Түсіндірме/ЖИ талдауы:", item["explanation"])
+            st.write("ЖИ талдауы және кері байланыс:", item["explanation"])
             
             score = st.number_input("Мұғалім бекітетін ұпай", min_value=0.0, max_value=float(max_s), value=float(prop_score), step=0.5, key="score_" + item["id"])
-            comment = st.text_area("Мұғалім ескертпесі", key="comment_" + item["id"])
+            comment = st.text_area("Мұғалімнің қосымша ескертпесі", key="comment_" + item["id"])
             
             if st.button("Бағаны бекіту", key="approve_" + item["id"]):
                 if not teacher_id.strip():
@@ -145,7 +147,7 @@ elif menu == "Нәтижелер":
             "Максималды ұпай": df.get("max_score", ""),
             "Бекіткен мұғалім": df.get("approved_by", ""),
             "Уақыты": df.get("approved_at", ""),
-            "Ескертпе": df.get("teacher_comment", "")
+            "Кері байланыс/Ескертпе": df.get("teacher_comment", "")
         })
 
         col1, col2 = st.columns(2)
@@ -180,9 +182,9 @@ elif menu == "Нәтижелер":
             with st.expander(f"{status_icon} Оқушы: {item['student_code']} — {score} / {max_s} балл ({status_text})"):
                 st.write("Мәтіні/Тапсырма:", item["task_text"])
                 st.write("Мұғалім бекіткен ұпай:", f"**{score} / {max_s}**")
-                st.write("Бекіткен мұғалім:", item["approved_by"])
-                st.write("Бекітілген уақыты:", item["approved_at"])
-                st.write("Ескертпе:", item["teacher_comment"] or "—")
+                st.write("Кері байланыс / Түсіндірме:", item["explanation"])
+                st.write("Мұғалім ескертпесі:", item["teacher_comment"] or "—")
+                st.write("Бекіткен мұғалім:", item["approved_by"], f"({item['approved_at']})")
 
 elif menu == "Статистика":
     st.subheader("📊 Сыныптың статистикасы мен графикалық аналитикасы")
@@ -212,4 +214,4 @@ elif menu == "Статистика":
 elif menu == "Қауіпсіздік":
     st.subheader("Қауіпсіздік күйі")
     st.write("Дерекқор: компьютердегі data/smarttest.db")
-    st.write("Сыртқы ЖИ режимі: Қосулы (GPT-4o Vision және Batch Processing қосылған)")
+    st.write("Сыртқы ЖИ режимі: Қосулы (GPT-4o Vision және Оқушыға кері байланыс қосылған)")
