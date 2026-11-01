@@ -10,21 +10,40 @@ from security_layer import init_db, save_pending_result, get_pending_results, ap
 st.set_page_config(page_title="SmartTest БЖБ–ТЖБ", layout="wide")
 init_db()
 
-# --- CSV ФАЙЛЫН АВТОМАТТЫ ЮКТЕУ ЖҮЙЕСІ ---
+# --- ФАЙЛДЫ ФОРМАТЫНА ҚАРАМАСТАН ҚАУІПСІЗ ОҚУ ЖҮЙЕСІ (CSV немесе Excel) ---
 @st.cache_data
 def load_specs():
-    csv_file = "specs.csv"
-    if os.path.exists(csv_file):
-        try:
-            df = pd.read_csv(csv_file, encoding="utf-8")
-            return df
-        except Exception:
-            try:
-                df = pd.read_csv(csv_file, encoding="utf-8-sig")
-                return df
-            except Exception:
-                pass
-    # Файл жоқ не қате болса бос структура қайтару
+    # Мүмкін болатын барлық файл атаулары мен кеңейтілімдерін тексереміз
+    possible_files = [
+        "specs.csv", "specs.xlsx", "specs.xls", "specs",
+        "./specs.csv", "./specs.xlsx", "./specs.xls",
+        "data/specs.csv", "data/specs.xlsx"
+    ]
+    
+    for file_path in possible_files:
+        if os.path.exists(file_path):
+            # 1. Егер файл Excel форматында болса (.xlsx немесе .xls)
+            if file_path.endswith(('.xlsx', '.xls')) or not file_path.endswith('.csv'):
+                try:
+                    df = pd.read_excel(file_path)
+                    df.columns = df.columns.str.strip()
+                    required_cols = ["grade", "subject", "term", "type", "num", "task", "desc"]
+                    if all(col in df.columns for col in required_cols):
+                        return df
+                except Exception:
+                    pass
+            
+            # 2. Егер файл CSV форматында болса
+            for enc in ["utf-8-sig", "utf-8", "cp1251", "latin1"]:
+                try:
+                    df = pd.read_csv(file_path, encoding=enc)
+                    df.columns = df.columns.str.strip()
+                    required_cols = ["grade", "subject", "term", "type", "num", "task", "desc"]
+                    if all(col in df.columns for col in required_cols):
+                        return df
+                except Exception:
+                    continue
+                    
     return pd.DataFrame(columns=["grade", "subject", "term", "type", "num", "task", "desc"])
 
 specs_df = load_specs()
@@ -68,9 +87,9 @@ st.title("📄 SmartTest — БЖБ / ТЖБ (Тоқсандар бойынша 
 if menu == "Басты бет":
     st.write("Оқушы жұмыстарын тексеруге және мұғалімнің қорытынды бағасын бекітуге арналған қауіпсіз платформа.")
     if not specs_df.empty:
-        st.success(f"✅ `specs.csv` файлы сәтті жүктелді! Барлығы **{len(specs_df)}** спецификация жазбасы танылды.")
+        st.success(f"✅ Спецификация файлы сәтті жүктелді! Барлығы **{len(specs_df)}** жазба танылды.")
     else:
-        st.warning("⚠️ `specs.csv` файлы табылмады немесе бос. Стандартты режим қолданылуда.")
+        st.warning("⚠️ Спецификация файлы табылмады немесе форматы қате. 'Қауіпсіздік' бөлімінен тексеріңіз.")
         
     c1, c2 = st.columns(2)
     c1.metric("Мұғалім тексеруін күтуде", len(get_pending_results()))
@@ -95,10 +114,9 @@ elif menu == "Жұмысты тексеру":
         "Құқық негіздері", "Орыс тілі мен әдебиеті", "Ағылшын тілі"
     ]
 
-    # Егер CSV жүктелсе, ішіндегі сыныптар мен пәндерді қосамыз
     if not specs_df.empty:
-        csv_grades = specs_df["grade"].dropna().unique().tolist()
-        csv_subjects = specs_df["subject"].dropna().unique().tolist()
+        csv_grades = specs_df["grade"].dropna().astype(str).unique().tolist()
+        csv_subjects = specs_df["subject"].dropna().astype(str).unique().tolist()
         all_grades = sorted(list(set(default_grades + csv_grades)))
         all_subjects = sorted(list(set(default_subjects + csv_subjects)))
     else:
@@ -117,21 +135,20 @@ elif menu == "Жұмысты тексеру":
     if prefix_text == "БЖБ":
         bzhb_sub_num = st.selectbox("📌 БЖБ нөмірін таңдаңыз:", ["БЖБ 1", "БЖБ 2", "БЖБ 3"])
 
-    # --- CSV-ДЕН ДЕРЕКТЕРДІ ІЗДЕУ ЖӘНЕ СҮЗУ (LOOKUP) ---
+    # --- ДЕРЕКТЕРДІ ІЗДЕУ ЖӘНЕ СҮЗУ (LOOKUP) ---
     default_task = f"{selected_grade}. {selected_term}. {selected_subject} пәні бойынша {prefix_text} тапсырмасы."
     default_desc = "1. Тапсырма шартын толық түсініп, талапқа сай орындайды (2 балл);\n2. Жауабын жүйелі түрде негіздеп, қатесіз жазады (3 балл)."
 
     if not specs_df.empty:
-        # Сүзгілеу
         filtered = specs_df[
-            (specs_df["grade"].astype(str) == str(selected_grade)) & 
-            (specs_df["subject"].astype(str) == str(selected_subject)) & 
-            (specs_df["term"].astype(str) == str(selected_term)) & 
-            (specs_df["type"].astype(str) == str(prefix_text))
+            (specs_df["grade"].astype(str).str.strip() == str(selected_grade).strip()) & 
+            (specs_df["subject"].astype(str).str.strip() == str(selected_subject).strip()) & 
+            (specs_df["term"].astype(str).str.strip() == str(selected_term).strip()) & 
+            (specs_df["type"].astype(str).str.strip() == str(prefix_text).strip())
         ]
         
         if prefix_text == "БЖБ" and bzhb_sub_num:
-            filtered = filtered[filtered["num"].astype(str) == str(bzhb_sub_num)]
+            filtered = filtered[filtered["num"].astype(str).str.strip() == str(bzhb_sub_num).strip()]
             
         if not filtered.empty:
             row = filtered.iloc[0]
@@ -325,6 +342,13 @@ elif menu == "Статистика":
         st.bar_chart(chart_data)
 
 elif menu == "Қауіпсіздік":
-    st.subheader("Қауіпсіздік күйі")
+    st.subheader("Қауіпсіздік және файл күйі")
     st.write("Дерекқор: компьютердегі data/smarttest.db")
-    st.write(f"Спецификациялар файлы: {'Табылды (specs.csv)' if not specs_df.empty else 'Табылмады'}")
+    st.markdown("---")
+    if not specs_df.empty:
+        st.success(f"✅ Спецификация файлы сәтті оқылды! Жалпы жолдар саны: **{len(specs_df)}**")
+        st.write("**Файлдағы табылған алғашқы жазбалар:**")
+        st.dataframe(specs_df.head(5))
+    else:
+        st.error("❌ Спецификация файлы табылмады немесе іші бос.")
+        st.info("💡 **Кеңес:** `app.py` файлымен бір папкада `specs.xlsx` немесе `specs.csv` файлы тұрғанына және бағандары (`grade, subject, term, type, num, task, desc`) дұрыс жазылғанына көз жеткізіңіз.")
