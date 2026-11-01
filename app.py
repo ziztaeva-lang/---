@@ -10,14 +10,13 @@ from security_layer import init_db, save_pending_result, get_pending_results, ap
 st.set_page_config(page_title="SmartTest БЖБ–ТЖБ", layout="wide")
 init_db()
 
-# --- ФАЙЛДЫ ФОРМАТЫНА ҚАРАМАСТАН ҚАУІПСІЗ ОҚУ ЖҮЙЕСІ (CSV немесе Excel) ---
+# --- ФАЙЛДЫ ФОРМАТЫНА ҚАРАМАСТАН ҚАУІПСІЗ ОҚУ ЖҮЙЕСІ (Excel немесе CSV) ---
 @st.cache_data
 def load_specs():
-    # Мүмкін болатын барлық файл атаулары мен кеңейтілімдерін тексереміз
     possible_files = [
-        "specs.csv", "specs.xlsx", "specs.xls", "specs",
-        "./specs.csv", "./specs.xlsx", "./specs.xls",
-        "data/specs.csv", "data/specs.xlsx"
+        "specs.xlsx", "specs.xls", "specs.csv", "specs",
+        "./specs.xlsx", "./specs.xls", "./specs.csv",
+        "data/specs.xlsx", "data/specs.csv"
     ]
     
     for file_path in possible_files:
@@ -26,7 +25,7 @@ def load_specs():
             if file_path.endswith(('.xlsx', '.xls')) or not file_path.endswith('.csv'):
                 try:
                     df = pd.read_excel(file_path)
-                    df.columns = df.columns.str.strip()
+                    df.columns = df.columns.str.strip().str.lower()
                     required_cols = ["grade", "subject", "term", "type", "num", "task", "desc"]
                     if all(col in df.columns for col in required_cols):
                         return df
@@ -37,7 +36,7 @@ def load_specs():
             for enc in ["utf-8-sig", "utf-8", "cp1251", "latin1"]:
                 try:
                     df = pd.read_csv(file_path, encoding=enc)
-                    df.columns = df.columns.str.strip()
+                    df.columns = df.columns.str.strip().str.lower()
                     required_cols = ["grade", "subject", "term", "type", "num", "task", "desc"]
                     if all(col in df.columns for col in required_cols):
                         return df
@@ -87,7 +86,7 @@ st.title("📄 SmartTest — БЖБ / ТЖБ (Тоқсандар бойынша 
 if menu == "Басты бет":
     st.write("Оқушы жұмыстарын тексеруге және мұғалімнің қорытынды бағасын бекітуге арналған қауіпсіз платформа.")
     if not specs_df.empty:
-        st.success(f"✅ Спецификация файлы сәтті жүктелді! Барлығы **{len(specs_df)}** жазба танылды.")
+        st.success(f"✅ Спецификация файлы сәтті оқылды! Барлығы **{len(specs_df)}** жазба танылды.")
     else:
         st.warning("⚠️ Спецификация файлы табылмады немесе форматы қате. 'Қауіпсіздік' бөлімінен тексеріңіз.")
         
@@ -282,73 +281,4 @@ elif menu == "Нәтижелер":
 
         col1, col2 = st.columns(2)
         with col1:
-            buffer_excel = io.BytesIO()
-            with pd.ExcelWriter(buffer_excel, engine='openpyxl') as writer:
-                export_df.to_excel(writer, index=False, sheet_name='Нәтижелер')
-            st.download_button(
-                label="📊 Excel (.xlsx) форматында жүктеу",
-                data=buffer_excel.getvalue(),
-                file_name="SmartTest_results.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-
-        with col2:
-            csv_data = export_df.to_csv(index=False).encode('utf-8-sig')
-            st.download_button(
-                label="📄 CSV форматында жүктеу",
-                data=csv_data,
-                file_name="SmartTest_results.csv",
-                mime="text/csv"
-            )
-
-        st.markdown("---")
-
-        for item in rows:
-            score = item['teacher_score']
-            max_s = item['max_score']
-            status_icon = "🟢" if score >= (max_s * 0.5) else "🔴"
-            status_text = "Тапсырма сәтті орындалды" if score >= (max_s * 0.5) else "Қосымша жұмыс қажет"
-
-            with st.expander(f"{status_icon} Оқушы: {item['student_code']} — {score} / {max_s} балл ({status_text})"):
-                st.write("Мәтіні/Тапсырма:", item["task_text"])
-                st.write("Мұғалім бекіткен ұпай:", f"**{score} / {max_s}**")
-                st.write("Кері байланыс / Түсіндірме:", item["explanation"])
-                st.write("Мұғалім ескертпесі:", item["teacher_comment"] or "—")
-                st.write("Бекіткен мұғалім:", item["approved_by"], f"({item['approved_at']})")
-
-elif menu == "Статистика":
-    st.subheader("📊 Сыныптың статистикасы мен графикалық аналитикасы")
-    rows = get_approved_results()
-    
-    if not rows:
-        st.info("Әзірге статистика үшін бекітілген нәтижелер жоқ.")
-    else:
-        df = pd.DataFrame(rows)
-        total_works = len(df)
-        avg_score = df['teacher_score'].mean()
-        max_possible = df['max_score'].iloc[0] if total_works > 0 else 5.0
-        
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Бекітілген жұмыс саны", total_works)
-        col2.metric("Орташа ұпай", f"{avg_score:.2f} / {max_possible}")
-        
-        success_count = len(df[df['teacher_score'] >= (df['max_score'] * 0.5)])
-        success_rate = (success_count / total_works) * 100 if total_works > 0 else 0
-        col3.metric("Табыстылық көрсеткіші", f"{success_rate:.1f}%")
-        
-        st.markdown("---")
-        st.write("### Оқушылардың ұпайлар бөлінісі (График)")
-        chart_data = df.set_index('student_code')[['teacher_score']]
-        st.bar_chart(chart_data)
-
-elif menu == "Қауіпсіздік":
-    st.subheader("Қауіпсіздік және файл күйі")
-    st.write("Дерекқор: компьютердегі data/smarttest.db")
-    st.markdown("---")
-    if not specs_df.empty:
-        st.success(f"✅ Спецификация файлы сәтті оқылды! Жалпы жолдар саны: **{len(specs_df)}**")
-        st.write("**Файлдағы табылған алғашқы жазбалар:**")
-        st.dataframe(specs_df.head(5))
-    else:
-        st.error("❌ Спецификация файлы табылмады немесе іші бос.")
-        st.info("💡 **Кеңес:** `app.py` файлымен бір папкада `specs.xlsx` немесе `specs.csv` файлы тұрғанына және бағандары (`grade, subject, term, type, num, task, desc`) дұрыс жазылғанына көз жеткізіңіз.")
+            buffer_excel = io.BytesIO
