@@ -5,7 +5,11 @@ import pandas as pd
 import io
 import os
 from openai import OpenAI
-from security_layer import init_db, save_pending_result, get_pending_results, approve_result, get_approved_results, external_ai_is_enabled
+from security_layer import (
+    init_db, save_pending_result, get_pending_results, 
+    approve_result, get_approved_results, external_ai_is_enabled,
+    get_user_credits, deduct_credit
+)
 
 st.set_page_config(page_title="SmartTest БЖБ–ТЖБ", layout="wide")
 init_db()
@@ -23,7 +27,6 @@ def load_specs():
     
     for file_path in possible_files:
         if os.path.exists(file_path):
-            # 1. Excel файлдарын оқу ұмтылысы
             if file_path.endswith(('.xlsx', '.xls')) or not file_path.endswith('.csv'):
                 try:
                     df = pd.read_excel(file_path)
@@ -34,12 +37,10 @@ def load_specs():
                     if not missing_cols:
                         return df, "Сәтті оқылды (Excel)"
                     else:
-                        debug_messages.loc if hasattr(debug_messages, 'loc') else None
-                        debug_messages.append(f"Файл табылды ({file_path}), бірақ мына бағандар жетіспеді: {missing_cols}. Табылған бағандар: {list(df.columns)}")
+                        debug_messages.append(f"Файл табылды ({file_path}), бірақ мына бағандар жетіспеді: {missing_cols}.")
                 except Exception as e:
                     debug_messages.append(f"Excel оқу қатесі ({file_path}): {e}")
             
-            # 2. CSV файлдарын оқу ұмтылысы
             for enc in ["utf-8-sig", "utf-8", "cp1251", "latin1"]:
                 try:
                     df = pd.read_csv(file_path, encoding=enc)
@@ -49,13 +50,8 @@ def load_specs():
                     
                     if not missing_cols:
                         return df, "Сәтті оқылды (CSV)"
-                    else:
-                        debug_messages.append(f"CSV табылды ({file_path}, кодировка: {enc}), бірақ бағандар жетіспеді: {missing_cols}. Бағандар: {list(df.columns)}")
                 except Exception:
                     continue
-        else:
-        # Егер файл тіпті жолдан табылмаса
-            pass
             
     return pd.DataFrame(), debug_messages
 
@@ -64,6 +60,8 @@ specs_df, load_logs = load_specs()
 # --- АУТЕНТИФИКАЦИЯ (КІРУ ЖҮЙЕСІ) ---
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
+if "username" not in st.session_state:
+    st.session_state.username = "gulnar"  # Әдепкі қолданушы
 
 if not st.session_state.authenticated:
     st.title("🔐 SmartTest — Мұғалімнің жеке кабинетіне кіру")
@@ -78,6 +76,7 @@ if not st.session_state.authenticated:
             
             if password_input == expected_password:
                 st.session_state.authenticated = True
+                st.session_state.username = "gulnar"
                 st.success("Жүйеге сәтті кірдіңіз!")
                 st.rerun()
             else:
@@ -88,7 +87,15 @@ if not st.session_state.authenticated:
 # --- НЕГІЗГІ ҚОСЫМША (КІРГЕННЕН КЕЙІН) ---
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
+# Пайдаланушының ағымдағы балансын алу
+current_user = st.session_state.get("username", "gulnar")
+user_balance = get_user_credits(current_user)
+
 st.sidebar.title("SmartTest")
+st.sidebar.markdown(f"👤 **Қолданушы:** {current_user}")
+st.sidebar.metric(label="💳 Сіздің балансыңыз", value=f"{user_balance} кредит")
+st.sidebar.markdown("---")
+
 menu = st.sidebar.selectbox("Бөлім", ["Басты бет", "Жұмысты тексеру", "Мұғалім бекітуі", "Нәтижелер", "Статистика", "Қауіпсіздік"])
 
 if st.sidebar.button("🚪 Жүйеден шығу"):
@@ -102,7 +109,7 @@ if menu == "Басты бет":
     if not specs_df.empty:
         st.success(f"✅ Спецификация файлы сәтті жүктелді! Барлығы **{len(specs_df)}** жазба танылды.")
     else:
-        st.warning("⚠️ Спецификация файлы табылмады немесе форматы қате. 'Қауіпсіздік' бөлімінен толық ақпаратты қараңыз.")
+        st.warning("⚠️ Спецификация файлы табылмады немесе форматы қате.")
         
     c1, c2 = st.columns(2)
     c1.metric("Мұғалім тексеруін күтуде", len(get_pending_results()))
@@ -121,8 +128,7 @@ elif menu == "Жұмысты тексеру":
     default_subjects = [
         "Қазақ тілі", "Қазақ әдебиеті", "Алгебра", "Геометрия", "Физика", "Химия", 
         "Биология", "География", "Жаратылыстану", "Цифрлық сауаттылық және жасанды интеллект", 
-        "Информатика және жасанды интеллект", "Қазақстан тарихы", "Дүние жүзі тарихы", 
-        "Құқық негіздері", "Орыс тілі мен әдебиеті", "Ағылшын тілі"
+        "Информатика және жасанды интеллект", "Қазақстан тарихы", "Дүние жүзі тарихы"
     ]
 
     if not specs_df.empty:
@@ -141,7 +147,6 @@ elif menu == "Жұмысты тексеру":
         selected_subject = st.selectbox("📌 Пәнді таңдаңыз", all_subjects)
 
     prefix_text = "БЖБ" if "БЖБ" in assessment_type else "ТЖБ"
-
     bzhb_sub_num = ""
     if prefix_text == "БЖБ":
         bzhb_sub_num = st.selectbox("📌 БЖБ нөмірін таңдаңыз:", ["БЖБ 1", "БЖБ 2", "БЖБ 3"])
@@ -156,7 +161,6 @@ elif menu == "Жұмысты тексеру":
             (specs_df["term"].astype(str).str.strip() == str(selected_term).strip()) & 
             (specs_df["type"].astype(str).str.strip() == str(prefix_text).strip())
         ]
-        
         if prefix_text == "БЖБ" and bzhb_sub_num:
             filtered = filtered[filtered["num"].astype(str).str.strip() == str(bzhb_sub_num).strip()]
             
@@ -188,26 +192,35 @@ elif menu == "Жұмысты тексеру":
                         return base64.b64encode(file_obj.getvalue()).decode('utf-8')
                     ai_exp = "Бағаны мұғалім тексеруі қажет."
 
+                    # Кредитті тексеру арқылы ЖИ талдауын іске қосу
                     if st.button("🔍 ЖИ арқылы талдау", key=f"ai_btn_{idx}"):
-                        with st.spinner("ЖИ талдап жатыр..."):
-                            try:
-                                b64_img = encode_image(uploaded_file)
-                                response = client.chat.completions.create(
-                                    model="gpt-4o",
-                                    messages=[
-                                        {"role": "system", "content": "Сіз тәжірибелі мектеп мұғалімісіз."},
-                                        {"role": "user", "content": [
-                                            {"type": "text", "text": f"Тапсырма: {task_text}\nДескрипторлар: {descriptors}"},
-                                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64_img}"}}
-                                        ]}
-                                    ],
-                                    max_tokens=600
-                                )
-                                ai_exp = response.choices[0].message.content
-                                st.success("Дайын!")
-                                st.write(ai_exp)
-                            except Exception as e:
-                                st.error(f"Қате: {e}")
+                        current_balance = get_user_credits(current_user)
+                        if current_balance < 1.0:
+                            st.error("❌ Балансыңызда кредит жеткіліксіз! Жұмысты талдау үшін балансты толықтырыңыз.")
+                        else:
+                            with st.spinner("ЖИ талдап жатыр..."):
+                                try:
+                                    b64_img = encode_image(uploaded_file)
+                                    response = client.chat.completions.create(
+                                        model="gpt-4o",
+                                        messages=[
+                                            {"role": "system", "content": "Сіз тәжірибелі мектеп мұғалімісіз."},
+                                            {"role": "user", "content": [
+                                                {"type": "text", "text": f"Тапсырма: {task_text}\nДескрипторлар: {descriptors}"},
+                                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64_img}"}}
+                                            ]}
+                                        ],
+                                        max_tokens=600
+                                    )
+                                    ai_exp = response.choices[0].message.content
+                                    
+                                    # Талдау сәтті аяқталған соң 1 кредит шегеру
+                                    deduct_credit(current_user, amount=1.0)
+                                    st.success("Талдау сәтті жасалды (-1 кредит)!")
+                                    st.write(ai_exp)
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Қате: {e}")
 
                     with st.form(key=f"form_{idx}"):
                         prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=0.0, step=0.5, key=f"score_{idx}")
@@ -227,7 +240,7 @@ elif menu == "Мұғалім бекітуі":
             score = st.number_input("Бекітілетін ұпай", value=float(item['proposed_score']), key="app_" + item["id"])
             comment = st.text_area("Ескертпе", key="com_" + item["id"])
             if st.button("Бекіту", key="btn_" + item["id"]):
-                approve_result(item["id"], score, "TEACHER-01", comment)
+                approve_result(item["id"], score, current_user, comment)
                 st.rerun()
 
 elif menu == "Нәтижелер":
@@ -250,7 +263,7 @@ elif menu == "Статистика":
 
 elif menu == "Қауіпсіздік":
     st.subheader("Қауіпсіздік және файл күйі (Диагностика)")
-    st.write("Дерекқор: data/smarttest.db")
+    st.write(f"Ағымдағы пайдаланушы: **{current_user}** | Баланс: **{user_balance} кредит**")
     st.markdown("---")
     
     if not specs_df.empty:
@@ -259,13 +272,6 @@ elif menu == "Қауіпсіздік":
         st.dataframe(specs_df.head(5))
     else:
         st.error("❌ Спецификация файлы табылмады немесе баған атаулары қате.")
-        st.markdown("### 🔍 Диагностикалық логтар (Неге оқылмады?):")
+        st.markdown("### 🔍 Диагностикалық логтар:")
         for log in load_logs:
             st.warning(log)
-            
-        st.info("""
-        💡 **Нұсқаулық:** 
-        1. Папкада `specs.xlsx` файлы барына көз жеткізіңіз.
-        2. Оның бағандары қатаң түрде мынадай болуы тиіс: 
-           `grade`, `subject`, `term`, `type`, `num`, `task`, `desc`.
-        """)
