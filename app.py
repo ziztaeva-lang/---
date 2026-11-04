@@ -100,9 +100,14 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 current_user = st.session_state.get("username", "teacher")
 user_balance = get_user_credits(current_user)
 
+# 1 кредиттің теңгедегі құны (қажет болса өзгерте аласыз, мысалы: 1 кредит = 50 ₸)
+price_per_credit = 50 
+total_tenge = user_balance * price_per_credit
+
 st.sidebar.title("SmartTest")
 st.sidebar.markdown(f"👤 **Қолданушы:** {current_user}")
-st.sidebar.metric(label="💳 Сіздің балансыңыз", value=f"{user_balance} кредит")
+# Балансты кредитпен және теңгемен көрсету
+st.sidebar.metric(label="💳 Сіздің балансыңыз", value=f"{user_balance} кредит", delta=f"{total_tenge:,.0f} ₸")
 st.sidebar.markdown("---")
 
 menu = st.sidebar.selectbox("Бөлім", ["Басты бет", "Жұмысты тексеру", "Мұғалім бекітуі", "Нәтижелер", "Статистика", "Қауіпсіздік"])
@@ -273,7 +278,7 @@ elif menu == "Статистика":
 
 elif menu == "Қауіпсіздік":
     st.subheader("Қауіпсіздік және файл күйі (Диагностика)")
-    st.write(f"Ағымдағы пайдаланушы: **{current_user}** | Баланс: **{user_balance} кредит**")
+    st.write(f"Ағымдағы пайдаланушы: **{current_user}** | Баланс: **{user_balance} кредит** ({total_tenge:,.0f} ₸)")
     st.markdown("---")
     
     if not specs_df.empty:
