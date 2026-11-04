@@ -1,4 +1,4 @@
-import streamlit as st
+﻿import streamlit as st
 from PIL import Image
 import base64
 import pandas as pd
@@ -8,7 +8,7 @@ from openai import OpenAI
 from security_layer import (
     init_db, save_pending_result, get_pending_results, 
     approve_result, get_approved_results, external_ai_is_enabled,
-    get_user_credits, deduct_credit
+    get_user_credits, deduct_credit, verify_user
 )
 
 st.set_page_config(page_title="SmartTest БЖБ–ТЖБ", layout="wide")
@@ -57,30 +57,39 @@ def load_specs():
 
 specs_df, load_logs = load_specs()
 
-# --- АУТЕНТИФИКАЦИЯ (КІРУ ЖҮЙЕСІ) ---
+# --- АУТЕНТИФИКАЦИЯ (ЛОГИН ЖӘНЕ ПАРОЛЬ МЕНЕН КІРУ) ---
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "username" not in st.session_state:
-    st.session_state.username = "gulnar"  # Әдепкі қолданушы
+    st.session_state.username = ""
 
 if not st.session_state.authenticated:
     st.title("🔐 SmartTest — Мұғалімнің жеке кабинетіне кіру")
-    st.write("Платформаға кіру үшін мұғалімнің құпия сөзін енгізіңіз.")
+    st.write("Платформаға кіру үшін логиніңіз бен құпия сөзіңізді енгізіңіз.")
     
     with st.form("login_form"):
-        password_input = st.text_input("Құпия сөз (Password)", type="password", placeholder="Құпия сөзді енгізіңіз...")
+        username_input = st.text_input("Логин (Username)", placeholder="Мысалы: gulnar")
+        password_input = st.text_input("Құпия сөз (Password)", type="password", placeholder="Құпия сөзіңізді енгізіңіз...")
         login_submitted = st.form_submit_button("Кіру")
         
         if login_submitted:
-            expected_password = st.secrets.get("TEACHER_PASSWORD", "smarttest2026")
+            # Алдымен дерекқордан/жүйеден тексеру
+            user = verify_user(username_input, password_input)
             
-            if password_input == expected_password:
+            # Егер Streamlit Secrets ішіндегі [passwords] арқылы кіргісі келсе
+            if not user:
+                secrets_passwords = st.secrets.get("passwords", {})
+                clean_username = username_input.strip().lower()
+                if clean_username in secrets_passwords and secrets_passwords[clean_username] == password_input:
+                    user = {"username": clean_username, "full_name": clean_username.capitalize()}
+            
+            if user:
                 st.session_state.authenticated = True
-                st.session_state.username = "gulnar"
-                st.success("Жүйеге сәтті кірдіңіз!")
+                st.session_state.username = user["username"]
+                st.success(f"Қош келдіңіз, {user.get('full_name', user['username'])}!")
                 st.rerun()
             else:
-                st.error("Құпия сөз қате! Қайта көріңіз.")
+                st.error("Логин немесе құпия сөз қате! Қайта көріңіз.")
     
     st.stop()
 
@@ -88,7 +97,7 @@ if not st.session_state.authenticated:
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # Пайдаланушының ағымдағы балансын алу
-current_user = st.session_state.get("username", "gulnar")
+current_user = st.session_state.get("username", "teacher")
 user_balance = get_user_credits(current_user)
 
 st.sidebar.title("SmartTest")
@@ -100,6 +109,7 @@ menu = st.sidebar.selectbox("Бөлім", ["Басты бет", "Жұмысты 
 
 if st.sidebar.button("🚪 Жүйеден шығу"):
     st.session_state.authenticated = False
+    st.session_state.username = ""
     st.rerun()
 
 st.title("📄 SmartTest — БЖБ / ТЖБ (Тоқсандар бойынша автоматты жүйе)")
