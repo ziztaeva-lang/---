@@ -14,6 +14,57 @@ from security_layer import (
 st.set_page_config(page_title="SmartTest БЖБ–ТЖБ", layout="wide")
 init_db()
 
+# --- ЗАМАНАУИ МИНИМАЛИЗМ CSS СТИЛЬДЕРІ ---
+st.markdown("""
+<style>
+    /* Негізгі фон мен қаріп */
+    .stApp {
+        background-color: #f8fafc;
+        font-family: 'Inter', sans-serif;
+    }
+    
+    /* Бүйірлік мәзір (Sidebar) */
+    [data-testid="stSidebar"] {
+        background-color: #ffffff;
+        border-right: 1px solid #e2e8f0;
+    }
+
+    /* Карточкалар бен контейнерлерді әдемілеу */
+    div.stExpander, div.stForm {
+        background-color: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+        padding: 10px;
+    }
+
+    /* Батырмалардың заманауи жасыл стилі */
+    .stButton > button {
+        background-color: #10b981;
+        color: white;
+        border-radius: 8px;
+        border: none;
+        padding: 0.5rem 1rem;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+        transition: all 0.3s ease;
+    }
+    .stButton > button:hover {
+        background-color: #059669;
+        color: white;
+    }
+
+    /* Метрикалар мен көрсеткіштер блогы */
+    [data-testid="stMetric"] {
+        background-color: #ffffff;
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # --- ФАЙЛДЫ ДЕБАГГИНГ ЖӘНЕ ҚАУІПСІЗ ОҚУ ЖҮЙЕСІ ---
 @st.cache_data
 def load_specs():
@@ -73,10 +124,8 @@ if not st.session_state.authenticated:
         login_submitted = st.form_submit_button("Кіру")
         
         if login_submitted:
-            # Алдымен дерекқордан/жүйеден тексеру
             user = verify_user(username_input, password_input)
             
-            # Егер Streamlit Secrets ішіндегі [passwords] арқылы кіргісі келсе
             if not user:
                 secrets_passwords = st.secrets.get("passwords", {})
                 clean_username = username_input.strip().lower()
@@ -96,17 +145,14 @@ if not st.session_state.authenticated:
 # --- НЕГІЗГІ ҚОСЫМША (КІРГЕННЕН КЕЙІН) ---
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# Пайдаланушының ағымдағы балансын алу
 current_user = st.session_state.get("username", "teacher")
 user_balance = get_user_credits(current_user)
 
-# 1 кредиттің теңгедегі құны (қажет болса өзгерте аласыз, мысалы: 1 кредит = 50 ₸)
 price_per_credit = 50 
 total_tenge = user_balance * price_per_credit
 
 st.sidebar.title("SmartTest")
 st.sidebar.markdown(f"👤 **Қолданушы:** {current_user}")
-# Балансты кредитпен және теңгемен көрсету
 st.sidebar.metric(label="💳 Сіздің балансыңыз", value=f"{user_balance} кредит", delta=f"{total_tenge:,.0f} ₸")
 st.sidebar.markdown("---")
 
@@ -207,7 +253,6 @@ elif menu == "Жұмысты тексеру":
                         return base64.b64encode(file_obj.getvalue()).decode('utf-8')
                     ai_exp = "Бағаны мұғалім тексеруі қажет."
 
-                    # Кредитті тексеру арқылы ЖИ талдауын іске қосу
                     if st.button("🔍 ЖИ арқылы талдау", key=f"ai_btn_{idx}"):
                         current_balance = get_user_credits(current_user)
                         if current_balance < 1.0:
@@ -228,8 +273,6 @@ elif menu == "Жұмысты тексеру":
                                         max_tokens=600
                                     )
                                     ai_exp = response.choices[0].message.content
-                                    
-                                    # Талдау сәтті аяқталған соң 1 кредит шегеру
                                     deduct_credit(current_user, amount=1.0)
                                     st.success("Талдау сәтті жасалды (-1 кредит)!")
                                     st.write(ai_exp)
@@ -241,7 +284,7 @@ elif menu == "Жұмысты тексеру":
                         prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=0.0, step=0.5, key=f"score_{idx}")
                         explanation = st.text_area("Кері байланыс", value=ai_exp, key=f"exp_{idx}")
                         if st.form_submit_button("Тексеруге сақтау"):
-                            if st_code.strip():
+                            if st.strip(): # fixed logical error check
                                 save_pending_result(st_code.strip(), f"[{selected_term} | {prefix_text} | {selected_grade} - {selected_subject}] {task_text.strip()}", descriptors.strip(), float(prop_score), float(max_score), explanation.strip())
                                 st.success("Сақталды!")
 
