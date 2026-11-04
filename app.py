@@ -4,6 +4,7 @@ import base64
 import pandas as pd
 import io
 import os
+import fitz  # PyMuPDF кітапханасы (PDF-ті суретке айналдыру үшін)
 from openai import OpenAI
 from security_layer import (
     init_db, save_pending_result, get_pending_results, 
@@ -17,19 +18,14 @@ init_db()
 # --- ЗАМАНАУИ МИНИМАЛИЗМ CSS СТИЛЬДЕРІ ---
 st.markdown("""
 <style>
-    /* Негізгі фон мен қаріп */
     .stApp {
         background-color: #f8fafc;
         font-family: 'Inter', sans-serif;
     }
-    
-    /* Бүйірлік мәзір (Sidebar) */
     [data-testid="stSidebar"] {
         background-color: #ffffff;
         border-right: 1px solid #e2e8f0;
     }
-
-    /* Карточкалар бен контейнерлерді әдемілеу */
     div.stExpander, div.stForm {
         background-color: #ffffff;
         border-radius: 12px;
@@ -37,8 +33,6 @@ st.markdown("""
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
         padding: 10px;
     }
-
-    /* Батырмалардың заманауи жасыл стилі */
     .stButton > button {
         background-color: #10b981;
         color: white;
@@ -53,8 +47,6 @@ st.markdown("""
         background-color: #059669;
         color: white;
     }
-
-    /* Метрикалар мен көрсеткіштер блогы */
     [data-testid="stMetric"] {
         background-color: #ffffff;
         padding: 15px;
@@ -65,7 +57,29 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- ФАЙЛДЫ ДЕБАГГИНГ ЖӘНЕ ҚАУІПСІЗ ОҚУ ЖҮЙЕСІ ---
+# --- ФАЙЛДАРДЫ ЖИ-ГЕ ДАЙЫНДАУ ВУНКТИЯЛАРЫ ---
+def process_uploaded_file(uploaded_file):
+    """Жүктелген файлды (Сурет немесе PDF) base64 суреттер тізіміне айналдырады"""
+    images_b64 = []
+    file_bytes = uploaded_file.getvalue()
+    
+    if uploaded_file.name.lower().endswith(".pdf"):
+        # PDF файлын ашып, әр бетін суретке айналдыру
+        pdf_document = fitz.open(stream=file_bytes, filetype="pdf")
+        for page_num in range(len(pdf_document)):
+            page = pdf_document[page_num]
+            pix = page.get_pixmap(dpi=150)
+            img_bytes = pix.tobytes("png")
+            b64_str = base64.b64encode(img_bytes).decode('utf-8')
+            images_b64.append(b64_str)
+    else:
+        # Стандартты сурет болса
+        b64_str = base64.b64encode(file_bytes).decode('utf-8')
+        images_b64.append(b64_str)
+        
+    return images_b64
+
+# --- СПЕЦИФИКАЦИЯ ФАЙЛЫН ОҚУ ---
 @st.cache_data
 def load_specs():
     possible_files = [
@@ -73,9 +87,7 @@ def load_specs():
         "./specs.xlsx", "./specs.xls", "./specs.csv",
         "data/specs.xlsx", "data/specs.csv"
     ]
-    
     debug_messages = []
-    
     for file_path in possible_files:
         if os.path.exists(file_path):
             if file_path.endswith(('.xlsx', '.xls')) or not file_path.endswith('.csv'):
@@ -83,32 +95,24 @@ def load_specs():
                     df = pd.read_excel(file_path)
                     df.columns = df.columns.str.strip().str.lower()
                     required_cols = ["grade", "subject", "term", "type", "num", "task", "desc"]
-                    missing_cols = [col for col in required_cols if col not in df.columns]
-                    
-                    if not missing_cols:
+                    if not [col for col in required_cols if col not in df.columns]:
                         return df, "Сәтті оқылды (Excel)"
-                    else:
-                        debug_messages.append(f"Файл табылды ({file_path}), бірақ мына бағандар жетіспеді: {missing_cols}.")
                 except Exception as e:
-                    debug_messages.append(f"Excel оқу қатесі ({file_path}): {e}")
-            
+                    debug_messages.append(f"Excel қатесі: {e}")
             for enc in ["utf-8-sig", "utf-8", "cp1251", "latin1"]:
                 try:
                     df = pd.read_csv(file_path, encoding=enc)
                     df.columns = df.columns.str.strip().str.lower()
                     required_cols = ["grade", "subject", "term", "type", "num", "task", "desc"]
-                    missing_cols = [col for col in required_cols if col not in df.columns]
-                    
-                    if not missing_cols:
+                    if not [col for col in required_cols if col not in df.columns]:
                         return df, "Сәтті оқылды (CSV)"
                 except Exception:
                     continue
-            
     return pd.DataFrame(), debug_messages
 
 specs_df, load_logs = load_specs()
 
-# --- АУТЕНТИФИКАЦИЯ (ЛОГИН ЖӘНЕ ПАРОЛЬ МЕНЕН КІРУ) ---
+# --- АУТЕНТИФИКАЦИЯ ---
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "username" not in st.session_state:
@@ -120,34 +124,28 @@ if not st.session_state.authenticated:
     
     with st.form("login_form"):
         username_input = st.text_input("Логин (Username)", placeholder="Мысалы: gulnar")
-        password_input = st.text_input("Құпия сөз (Password)", type="password", placeholder="Құпия сөзіңізді енгізіңіз...")
-        login_submitted = st.form_submit_button("Кіру")
-        
-        if login_submitted:
+        password_input = st.text_input("Құпия сөз (Password)", type="password", placeholder="Құпия сөз...")
+        if st.form_submit_button("Кіру"):
             user = verify_user(username_input, password_input)
-            
             if not user:
                 secrets_passwords = st.secrets.get("passwords", {})
                 clean_username = username_input.strip().lower()
                 if clean_username in secrets_passwords and secrets_passwords[clean_username] == password_input:
                     user = {"username": clean_username, "full_name": clean_username.capitalize()}
-            
             if user:
                 st.session_state.authenticated = True
                 st.session_state.username = user["username"]
                 st.success(f"Қош келдіңіз, {user.get('full_name', user['username'])}!")
                 st.rerun()
             else:
-                st.error("Логин немесе құпия сөз қате! Қайта көріңіз.")
-    
+                st.error("Логин немесе құпия сөз қате!")
     st.stop()
 
-# --- НЕГІЗГІ ҚОСЫМША (КІРГЕННЕН КЕЙІН) ---
+# --- НЕГІЗГІ ҚОСЫМША ---
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 current_user = st.session_state.get("username", "teacher")
 user_balance = get_user_credits(current_user)
-
 price_per_credit = 50 
 total_tenge = user_balance * price_per_credit
 
@@ -234,57 +232,68 @@ elif menu == "Жұмысты тексеру":
     descriptors = st.text_area("Бағалау дескрипторлары", value=default_desc)
     max_score = st.number_input("Ең жоғары ұпай", min_value=0.5, max_value=100.0, value=10.0 if prefix_text == "ТЖБ" else 5.0, step=0.5)
     
-    uploaded_files = st.file_uploader("Оқушылардың жұмыс суреттерін жүктеу", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+    # PDF ФАЙЛДАРЫН ДА ҚАБЫЛДАЙТЫН ФАЙЛ ЖҮКТЕУШІ
+    uploaded_files = st.file_uploader("Оқушылардың жұмыс файлдарын жүктеу (JPG, PNG, PDF)", type=["jpg", "jpeg", "png", "pdf"], accept_multiple_files=True)
     
     if uploaded_files:
-        st.success(f"Барлығы {len(uploaded_files)} жұмыс жүктелді.")
+        st.success(f"Барлығы {len(uploaded_files)} файл жүктелді.")
         for idx, uploaded_file in enumerate(uploaded_files):
             with st.expander(f"📁 Жұмыс №{idx+1}: {uploaded_file.name}"):
                 col_img, col_form = st.columns([1, 1])
                 with col_img:
-                    try:
-                        image = Image.open(uploaded_file)
-                        st.image(image, caption=uploaded_file.name, use_container_width=True)
-                    except Exception:
-                        st.error("Суретті ашу мүмкін болмады.")
+                    if uploaded_file.name.lower().endswith('.pdf'):
+                        st.info("📄 PDF форматындағы документ жүктелді.")
+                    else:
+                        try:
+                            image = Image.open(uploaded_file)
+                            st.image(image, caption=uploaded_file.name, use_container_width=True)
+                        except Exception:
+                            st.error("Суретті ашу мүмкін болмады.")
                 with col_form:
                     st_code = st.text_input("Анонимді оқушы коды", value=f"{selected_grade}-0{idx+1}", key=f"code_{idx}")
-                    def encode_image(file_obj):
-                        return base64.b64encode(file_obj.getvalue()).decode('utf-8')
                     ai_exp = "Бағаны мұғалім тексеруі қажет."
 
                     if st.button("🔍 ЖИ арқылы талдау", key=f"ai_btn_{idx}"):
                         current_balance = get_user_credits(current_user)
                         if current_balance < 1.0:
-                            st.error("❌ Балансыңызда кредит жеткіліксіз! Жұмысты талдау үшін балансты толықтырыңыз.")
+                            st.error("❌ Балансыңызда кредит жеткіліксіз!")
                         else:
-                            with st.spinner("ЖИ талдап жатыр..."):
+                            with st.spinner("ЖИ файлды талдап жатыр..."):
                                 try:
-                                    b64_img = encode_image(uploaded_file)
+                                    # PDF немесе Суретті base64 форматына айналдыру
+                                    images_b64 = process_uploaded_file(uploaded_file)
+                                    
+                                    # GPT-4o үшін хабарлама мазмұнын дайындау
+                                    messages_content = [{"type": "text", "text": f"Тапсырма: {task_text}\nДескрипторлар: {descriptors}"}]
+                                    for img_b64 in images_b64:
+                                        messages_content.append({
+                                            "type": "image_url",
+                                            "image_url": {"url": f"data:image/png;base64,{img_b64}"}
+                                        })
+
                                     response = client.chat.completions.create(
                                         model="gpt-4o",
                                         messages=[
                                             {"role": "system", "content": "Сіз тәжірибелі мектеп мұғалімісіз."},
-                                            {"role": "user", "content": [
-                                                {"type": "text", "text": f"Тапсырма: {task_text}\nДескрипторлар: {descriptors}"},
-                                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64_img}"}}
-                                            ]}
+                                            {"role": "user", "content": messages_content}
                                         ],
-                                        max_tokens=600
+                                        max_tokens=800
                                     )
                                     ai_exp = response.choices[0].message.content
+                                    
+                                    # Тек 1 кредит шегеру (PDF канша бет болса да)
                                     deduct_credit(current_user, amount=1.0)
                                     st.success("Талдау сәтті жасалды (-1 кредит)!")
                                     st.write(ai_exp)
                                     st.rerun()
                                 except Exception as e:
-                                    st.error(f"Қате: {e}")
+                                    st.error(f"Қате пайда болды: {e}")
 
                     with st.form(key=f"form_{idx}"):
                         prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=0.0, step=0.5, key=f"score_{idx}")
                         explanation = st.text_area("Кері байланыс", value=ai_exp, key=f"exp_{idx}")
                         if st.form_submit_button("Тексеруге сақтау"):
-                            if st.strip(): # fixed logical error check
+                            if st_code.strip():
                                 save_pending_result(st_code.strip(), f"[{selected_term} | {prefix_text} | {selected_grade} - {selected_subject}] {task_text.strip()}", descriptors.strip(), float(prop_score), float(max_score), explanation.strip())
                                 st.success("Сақталды!")
 
@@ -330,6 +339,5 @@ elif menu == "Қауіпсіздік":
         st.dataframe(specs_df.head(5))
     else:
         st.error("❌ Спецификация файлы табылмады немесе баған атаулары қате.")
-        st.markdown("### 🔍 Диагностикалық логтар:")
         for log in load_logs:
             st.warning(log)
