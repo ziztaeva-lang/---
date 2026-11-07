@@ -57,14 +57,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- ФАЙЛДАРДЫ ЖИ-ГЕ ДАЙЫНДАУ ВУНКТИЯЛАРЫ ---
+# --- ФАЙЛДАРДЫ ЖИ-ГЕ ДАЙЫНДАУ ФУНКЦИЯСЫ ---
 def process_uploaded_file(uploaded_file):
     """Жүктелген файлды (Сурет немесе PDF) base64 суреттер тізіміне айналдырады"""
     images_b64 = []
     file_bytes = uploaded_file.getvalue()
     
     if uploaded_file.name.lower().endswith(".pdf"):
-        # PDF файлын ашып, әр бетін суретке айналдыру
         pdf_document = fitz.open(stream=file_bytes, filetype="pdf")
         for page_num in range(len(pdf_document)):
             page = pdf_document[page_num]
@@ -73,7 +72,6 @@ def process_uploaded_file(uploaded_file):
             b64_str = base64.b64encode(img_bytes).decode('utf-8')
             images_b64.append(b64_str)
     else:
-        # Стандартты сурет болса
         b64_str = base64.b64encode(file_bytes).decode('utf-8')
         images_b64.append(b64_str)
         
@@ -211,7 +209,7 @@ elif menu == "Жұмысты тексеру":
         bzhb_sub_num = st.selectbox("📌 БЖБ нөмірін таңдаңыз:", ["БЖБ 1", "БЖБ 2", "БЖБ 3"])
 
     default_task = f"{selected_grade}. {selected_term}. {selected_subject} пәні бойынша {prefix_text} тапсырмасы."
-    default_desc = "1. Тапсырма шартын толық түсініп, талапқа сай орындайды (2 балл);\n2. Жауабын жүйелі түрде негіздеп, қатесіз жазады (3 балл)."
+    default_desc = "1. Тапсырма шартын толық түсініп, талапқа сай орындайды (10 балл);\n2. Жауабын жүйелі түрде негіздеп, қатесіз жазады (10 балл)."
 
     if not specs_df.empty:
         filtered = specs_df[
@@ -228,9 +226,54 @@ elif menu == "Жұмысты тексеру":
             default_task = str(row["task"])
             default_desc = str(row["desc"])
 
-    task_text = st.text_area("Тапсырма тақырыбы немесе сұрақ", value=default_task)
-    descriptors = st.text_area("Бағалау дескрипторлары", value=default_desc)
-    max_score = st.number_input("Ең жоғары ұпай", min_value=0.5, max_value=100.0, value=10.0 if prefix_text == "ТЖБ" else 5.0, step=0.5)
+    # --- ЕҢ ЖОҒАРҒЫ БАЛЛ ЖӘНЕ АВТОГЕНЕРАЦИЯ БӨЛІМІ ---
+    st.markdown("---")
+    st.subheader("⚙️ Тапсырма мен дескриптор параметрлері")
+    
+    col_score, col_gen_btn = st.columns([1, 2])
+    with col_score:
+        max_score = st.number_input(
+            "Ең жоғары ұпай", 
+            min_value=1.0, 
+            max_value=20.0,  # 20 балға дейін көтерілді
+            value=20.0, 
+            step=1.0
+        )
+    with col_gen_btn:
+        st.write("")
+        st.write("")
+        auto_gen_clicked = st.button("✨ Дескриптор мен шартты автоматты генерациялау")
+
+    task_topic = st.text_input("Тапсырма тақырыбы немесе сұрақ", value=default_task)
+
+    # Автогенерация логикасы
+    if auto_gen_clicked:
+        with st.spinner("Жасанды интеллект дескрипторларды дайындауда..."):
+            try:
+                prompt = f"""
+                Сен тәжірибелі қазақстандық мұғалім әрі әдіскерсің. 
+                Пән және сынып: {selected_grade}, {selected_subject}
+                Тақырып: {task_topic}
+                Жалпы ең жоғарғы ұпай: {int(max_score)} балл.
+                
+                Осы деректер негізінде оқушылардың жұмысын тексеруге арналған:
+                1. Қысқаша тапсырма шартын (мұғалімге арналған нұсқау).
+                2. {int(max_score)} балдық жүйеге бөлінген нақты бағалау дескрипторларын (критерийлер мен балдарын көрсетіп) 
+                қазақ тілінде құрастырып бер. Жауапты нақты, түсінікті форматта жаз.
+                """
+                
+                response = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.3
+                )
+                st.session_state['generated_descriptors'] = response.choices[0].message.content
+                st.success("✅ Дескрипторлар сәтті генерацияланды!")
+            except Exception as e:
+                st.error(f"Генерация қатесі: {e}")
+
+    default_desc_text = st.session_state.get('generated_descriptors', default_desc)
+    descriptors = st.text_area("Бағалау дескрипторлары (Өзгертуге болады)", value=default_desc_text, height=150)
     
     # PDF ФАЙЛДАРЫН ДА ҚАБЫЛДАЙТЫН ФАЙЛ ЖҮКТЕУШІ
     uploaded_files = st.file_uploader("Оқушылардың жұмыс файлдарын жүктеу (JPG, PNG, PDF)", type=["jpg", "jpeg", "png", "pdf"], accept_multiple_files=True)
@@ -260,11 +303,9 @@ elif menu == "Жұмысты тексеру":
                         else:
                             with st.spinner("ЖИ файлды талдап жатыр..."):
                                 try:
-                                    # PDF немесе Суретті base64 форматына айналдыру
                                     images_b64 = process_uploaded_file(uploaded_file)
                                     
-                                    # GPT-4o үшін хабарлама мазмұнын дайындау
-                                    messages_content = [{"type": "text", "text": f"Тапсырма: {task_text}\nДескрипторлар: {descriptors}"}]
+                                    messages_content = [{"type": "text", "text": f"Тапсырма: {task_topic}\nДескрипторлар: {descriptors}\nЕң жоғарғы балл: {max_score}"}]
                                     for img_b64 in images_b64:
                                         messages_content.append({
                                             "type": "image_url",
@@ -274,14 +315,13 @@ elif menu == "Жұмысты тексеру":
                                     response = client.chat.completions.create(
                                         model="gpt-4o",
                                         messages=[
-                                            {"role": "system", "content": "Сіз тәжірибелі мектеп мұғалімісіз."},
+                                            {"role": "system", "content": "Сіз тәжірибелі мектеп мұғалімісіз. Берілген дескрипторлар мен ең жоғарғы баллға сәйкес оқушы жұмысын әділ тексеріп, ұпай мен кері байланыс беріңіз."},
                                             {"role": "user", "content": messages_content}
                                         ],
                                         max_tokens=800
                                     )
                                     ai_exp = response.choices[0].message.content
                                     
-                                    # Тек 1 кредит шегеру (PDF канша бет болса да)
                                     deduct_credit(current_user, amount=1.0)
                                     st.success("Талдау сәтті жасалды (-1 кредит)!")
                                     st.write(ai_exp)
@@ -294,7 +334,7 @@ elif menu == "Жұмысты тексеру":
                         explanation = st.text_area("Кері байланыс", value=ai_exp, key=f"exp_{idx}")
                         if st.form_submit_button("Тексеруге сақтау"):
                             if st_code.strip():
-                                save_pending_result(st_code.strip(), f"[{selected_term} | {prefix_text} | {selected_grade} - {selected_subject}] {task_text.strip()}", descriptors.strip(), float(prop_score), float(max_score), explanation.strip())
+                                save_pending_result(st_code.strip(), f"[{selected_term} | {prefix_text} | {selected_grade} - {selected_subject}] {task_topic.strip()}", descriptors.strip(), float(prop_score), float(max_score), explanation.strip())
                                 st.success("Сақталды!")
 
 elif menu == "Мұғалім бекітуі":
