@@ -390,14 +390,20 @@ elif menu == "Балансты толтыру":
         
     st.markdown(f"**Төленетін сома:** {amount} ₸")
     
-    if st.button("Kaspi Pay арқылы төлеу"):
-        st.info("Төмендегі QR кодты Kaspi қосымшасы арқылы сканерлеп төлеңіз:")
-        st.warning("Төлем жасап болған соң, төмендегі растау түймесін басыңыз.")
-        
-        if st.button("Төлемді растау (Тест режимі)"):
-            add_payment_record(current_user, amount, credits, "TEST_PAYMENT_123")
-            st.success(f"✅ Балансыңыз сәтті толықтырылды! +{credits} кредит қосылды.")
-            st.rerun()
+    st.info("📱 Төмендегі QR кодты Kaspi қосымшасы арқылы сканерлеп төлеңіз:")
+    
+    # Kaspi Pay QR код суретін шығару
+    if os.path.exists("kaspi_qr.png"):
+        st.image("kaspi_qr.png", caption="Kaspi Pay арқылы төлеу QR коды", width=300)
+    else:
+        st.warning("⚠️ `kaspi_qr.png` файлы табылмады. Kaspi Pay QR суретін жоба папкасына салыңыз.")
+    
+    st.warning("Төлем жасап болған соң, балансыңызды белсендіру үшін төменгі түймені басыңыз.")
+    
+    if st.button("✅ Төлемді растау"):
+        add_payment_record(current_user, amount, credits, "KASPI_PAY_MANUAL")
+        st.success(f"Балансыңыз сәтті толықтырылды! +{credits} кредит қосылды.")
+        st.rerun()
 
 elif menu == "Қауіпсіздік":
     st.subheader("Қауіпсіздік және файл күйі (Диагностика)")
