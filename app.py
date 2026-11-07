@@ -352,4 +352,83 @@ elif menu == "Мұғалім бекітуі":
     if not pending:
         st.info("Бекітуді күтіп тұрған жұмыс жоқ.")
     for item in pending:
-        with
+        with st.expander(f"Жұмыс: {item['student_code']} — {item['proposed_score']} балл"):
+            score = st.number_input("Бекітілетін ұпай", value=float(item['proposed_score']), key="app_" + item["id"])
+            comment = st.text_area("Ескертпе", key="com_" + item["id"])
+            if st.button("Бекіту", key="btn_" + item["id"]):
+                approve_result(item["id"], score, current_user, comment)
+                st.rerun()
+
+elif menu == "Нәтижелер":
+    st.subheader("Мұғалім бекіткен нәтижелер")
+    rows = get_approved_results()
+    if not rows:
+        st.info("Әзірге нәтиже жоқ.")
+    else:
+        df_res = pd.DataFrame(rows)
+        st.dataframe(df_res)
+
+elif menu == "Статистика":
+    st.subheader("📊 Статистика")
+    rows = get_approved_results()
+    if not rows:
+        st.info("Әзірге статистика жоқ.")
+    else:
+        df_stat = pd.DataFrame(rows)
+        st.bar_chart(df_stat.set_index('student_code')[['teacher_score']])
+
+elif menu == "Балансты толтыру":
+    st.subheader("💳 Кредит сатып алу және балансты толтыру")
+    st.write("1 кредит = 100 ₸. Қалаған кредит санын енгізіп, төлем жасаңыз.")
+    
+    # Мұғалім өз қалауынша кредит санын енгізеді (1 кредит = 100 ₸)
+    credits_to_buy = st.number_input("Сатып алғыңыз келетін кредит саны:", min_value=1, max_value=1000, value=10, step=1)
+    
+    # Төленетін соманы автоматты есептеу
+    amount = credits_to_buy * 100
+    
+    st.markdown(f"**Төленетін жалпы сома:** <span style='color: #10b981; font-size: 20px; font-weight: bold;'>{amount:,.0f} ₸</span>", unsafe_allow_html=True)
+    
+    st.markdown("---")
+    st.info(f"📱 **Төлем жасау қадамдары:**\n1. Төмендегі QR кодты Kaspi қосымшасы арқылы сканерлеңіз.\n2. Көрсетілген соманы (**{amount:,.0f} ₸**) аударыңыз.\n3. Төлем чегіндегі **транзакция нөмірін** төмендегі өріске енгізіп, растауға жіберіңіз.")
+    
+    # Kaspi Pay QR код суретін шығару
+    if os.path.exists("kaspi_qr_ИЗС.png"):
+        st.image("kaspi_qr_ИЗС.png", caption="SmartTest — Kaspi Pay QR коды", width=280)
+    else:
+        st.warning("⚠️ `kaspi_qr_ИЗС.png` файлы табылмады. Kaspi Pay QR суретін жоба папкасына салыңыз.")
+    
+    # Қауіпсіз төлем сұранысын жіберу формасы
+    with st.form("payment_verification_form"):
+        st.write("### Төлемді растау үшін деректерді енгізіңіз:")
+        txn_id = st.text_input("Kaspi операция / транзакция нөмірі", placeholder="Чектегі кодты немесе нөмірді жазыңыз...")
+        
+        submit_payment = st.form_submit_button("📤 Төлем туралы хабарлау")
+        
+        if submit_payment:
+            if not txn_id.strip():
+                st.error("❌ Дұрыс транзакция нөмірін енгізіңіз!")
+            else:
+                try:
+                    add_payment_record(current_user, amount, float(credits_to_buy), txn_id.strip())
+                    st.success(f"✅ Төлем туралы өтінім қабылданды! Транзакция коды: {txn_id}. Әкімші тексергеннен кейін балансыңызға {credits_to_buy} кредит қосылады.")
+                except Exception as e:
+                    st.error(f"Қате орын алды: {e}")
+
+elif menu == "Қауіпсіздік":
+    if not is_admin:
+        st.error("⛔ Бұл бетке тек әкімші (admin) ғана кіре алады!")
+        st.stop()
+
+    st.subheader("Қауіпсіздік және файл күйі (Диагностика)")
+    st.write(f"Ағымдағы пайдаланушы: **{current_user}** | Баланс: **{user_balance} кредит** ({total_tenge:,.0f} ₸)")
+    st.markdown("---")
+    
+    if not specs_df.empty:
+        st.success(f"✅ Спецификация файлы сәтті оқылды! Жалпы жолдар саны: **{len(specs_df)}**")
+        st.write("**Файлдағы табылған бағандар:**", list(specs_df.columns))
+        st.dataframe(specs_df.head(5))
+    else:
+        st.error("❌ Спецификация файлы табылмады немесе баған атаулары қате.")
+        for log in load_logs:
+            st.warning(log)
