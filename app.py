@@ -390,18 +390,29 @@ elif menu == "Балансты толтыру":
     st.markdown(f"**Төленетін жалпы сома:** <span style='color: #10b981; font-size: 20px; font-weight: bold;'>{amount:,.0f} ₸</span>", unsafe_allow_html=True)
     
     st.markdown("---")
-    st.info(f"📱 **Төлем жасау қадамдары:**\n1. Төмендегі QR кодты Kaspi қосымшасы арқылы сканерлеңіз.\n2. Көрсетілген соманы (**{amount:,.0f} ₸**) аударыңыз.\n3. Төлем чегіндегі **транзакция нөмірін** төмендегі өріске енгізіп, растауға жіберіңіз.")
+    st.info(f"📱 **Төлем жасау қадамдары:**\n1. Төмендегі QR кодтардың бірін (Kaspi немесе Halyk) сканерлеңіз.\n2. Көрсетілген соманы (**{amount:,.0f} ₸**) аударыңыз.\n3. Төлем чегіндегі **транзакция / чек нөмірін** төмендегі өріске енгізіп, растауға жіберіңіз.")
     
-    # Kaspi Pay QR код суретін шығару
-    if os.path.exists("kaspi_qr_ИЗС.png"):
-        st.image("kaspi_qr_ИЗС.png", caption="SmartTest — Kaspi Pay QR коды", width=280)
-    else:
-        st.warning("⚠️ `kaspi_qr_ИЗС.png` файлы табылмады. Kaspi Pay QR суретін жоба папкасына салыңыз.")
+    # QR кодтарды қатар шығару (Kaspi және Halyk)
+    qr_col1, qr_col2 = st.columns(2)
+    
+    with qr_col1:
+        st.write("### 🟡 Kaspi QR арқылы төлеу")
+        if os.path.exists("kaspi_qr_ИЗС.png"):
+            st.image("kaspi_qr_ИЗС.png", caption="SmartTest — Kaspi Pay QR", width=260)
+        else:
+            st.warning("⚠️ `kaspi_qr_ИЗС.png` файлы табылмады.")
+            
+    with qr_col2:
+        st.write("### 🟢 Halyk QR арқылы төлеу")
+        if os.path.exists("halyk_qr_ЫРЫС.png"):
+            st.image("halyk_qr_ЫРЫС.png", caption="SmartTest — Halyk QR", width=260)
+        else:
+            st.warning("⚠️ `halyk_qr_ЫРЫС.png` суретін жоба папкасына салыңыз.")
     
     # Қауіпсіз төлем сұранысын жіберу формасы
     with st.form("payment_verification_form"):
         st.write("### Төлемді растау үшін деректерді енгізіңіз:")
-        txn_id = st.text_input("Kaspi операция / транзакция нөмірі", placeholder="Чектегі кодты немесе нөмірді жазыңыз...")
+        txn_id = st.text_input("Kaspi немесе Halyk транзакция/чек нөмірі", placeholder="Чектегі транзакция немесе операция нөмірін жазыңыз...")
         
         submit_payment = st.form_submit_button("📤 Төлем туралы хабарлау")
         
@@ -411,7 +422,7 @@ elif menu == "Балансты толтыру":
             else:
                 try:
                     add_payment_record(current_user, amount, float(credits_to_buy), txn_id.strip())
-                    st.success(f"✅ Төлем туралы өтінім қабылданды! Транзакция коды: {txn_id}. Әкімші тексергеннен кейін балансыңызға {credits_to_buy} кредит қосылады.")
+                    st.success(f"✅ Төлем туралы өтінім қабылданды! Транзакция коды: {txn_id}. Әкімші (Zoya) тексергеннен кейін балансыңызға {credits_to_buy} кредит қосылады.")
                 except Exception as e:
                     st.error(f"Қате орын алды: {e}")
 
