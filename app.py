@@ -393,10 +393,10 @@ elif menu == "Балансты толтыру":
     st.info("📱 Төмендегі QR кодты Kaspi қосымшасы арқылы сканерлеп төлеңіз:")
     
     # Kaspi Pay QR код суретін шығару
-    if os.path.exists("kaspi_qr.png"):
-        st.image("kaspi_qr.png", caption="Kaspi Pay арқылы төлеу QR коды", width=300)
+    if os.path.exists("kaspi_qr_ИЗС.png"):
+        st.image("kaspi_qr_ИЗС.png", caption="Kaspi Pay арқылы төлеу QR коды", width=300)
     else:
-        st.warning("⚠️ `kaspi_qr.png` файлы табылмады. Kaspi Pay QR суретін жоба папкасына салыңыз.")
+        st.warning("⚠️ `kaspi_qr_ИЗС.png` файлы табылмады. Kaspi Pay QR суретін жоба папкасына салыңыз.")
     
     st.warning("Төлем жасап болған соң, балансыңызды белсендіру үшін төменгі түймені басыңыз.")
     
