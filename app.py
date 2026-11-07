@@ -388,22 +388,33 @@ elif menu == "Балансты толтыру":
         amount = 5000
         credits = 100
         
-    st.markdown(f"**Төленетін сома:** {amount} ₸")
+    st.markdown(f"**Төленетін сома:** <span style='color: #10b981; font-size: 20px; font-weight: bold;'>{amount} ₸</span>", unsafe_allow_html=True)
     
-    st.info("📱 Төмендегі QR кодты Kaspi қосымшасы арқылы сканерлеп төлеңіз:")
+    st.markdown("---")
+    st.info("📱 **Төлем жасау қадамдары:**\n1. Төмендегі QR кодты Kaspi қосымшасы арқылы сканерлеңіз.\n2. Көрсетілген соманы (**" + str(amount) + " ₸**) аударыңыз.\n3. Төлем чегіндегі **транзакция нөмірін** төмендегі өріске енгізіп, растауға жіберіңіз.")
     
     # Kaspi Pay QR код суретін шығару
     if os.path.exists("kaspi_qr_ИЗС.png"):
-        st.image("kaspi_qr_ИЗС.png", caption="Kaspi Pay арқылы төлеу QR коды", width=300)
+        st.image("kaspi_qr_ИЗС.png", caption="SmartTest — Kaspi Pay QR коды", width=280)
     else:
         st.warning("⚠️ `kaspi_qr_ИЗС.png` файлы табылмады. Kaspi Pay QR суретін жоба папкасына салыңыз.")
     
-    st.warning("Төлем жасап болған соң, балансыңызды белсендіру үшін төменгі түймені басыңыз.")
-    
-    if st.button("✅ Төлемді растау"):
-        add_payment_record(current_user, amount, credits, "KASPI_PAY_MANUAL")
-        st.success(f"Балансыңыз сәтті толықтырылды! +{credits} кредит қосылды.")
-        st.rerun()
+    # Қауіпсіз төлем сұранысын жіберу формасы
+    with st.form("payment_verification_form"):
+        st.write("### Төлемді растау үшін деректерді енгізіңіз:")
+        txn_id = st.text_input("Kaspi операция / транзакция нөмірі", placeholder="Чектегі кодты немесе нөмірді жазыңыз...")
+        
+        submit_payment = st.form_submit_button("📤 Төлем туралы хабарлау")
+        
+        if submit_payment:
+            if not txn_id.strip():
+                st.error("❌ Дұрыс транзакция нөмірін енгізіңіз!")
+            else:
+                try:
+                    add_payment_record(current_user, amount, credits, txn_id.strip())
+                    st.success(f"✅ Төлем туралы өтінім қабылданды! Транзакция коды: {txn_id}. Әкімші тексергеннен кейін балансыңызға {credits} кредит қосылады.")
+                except Exception as e:
+                    st.error(f"Қате орын алды: {e}")
 
 elif menu == "Қауіпсіздік":
     st.subheader("Қауіпсіздік және файл күйі (Диагностика)")
