@@ -9,7 +9,7 @@ from openai import OpenAI
 from security_layer import (
     init_db, save_pending_result, get_pending_results, 
     approve_result, get_approved_results, external_ai_is_enabled,
-    get_user_credits, deduct_credit, verify_user
+    get_user_credits, deduct_credit, verify_user, add_payment_record
 )
 
 st.set_page_config(page_title="SmartTest БЖБ–ТЖБ", layout="wide")
@@ -152,7 +152,7 @@ st.sidebar.markdown(f"👤 **Қолданушы:** {current_user}")
 st.sidebar.metric(label="💳 Сіздің балансыңыз", value=f"{user_balance} кредит", delta=f"{total_tenge:,.0f} ₸")
 st.sidebar.markdown("---")
 
-menu = st.sidebar.selectbox("Бөлім", ["Басты бет", "Жұмысты тексеру", "Мұғалім бекітуі", "Нәтижелер", "Статистика", "Қауіпсіздік"])
+menu = st.sidebar.selectbox("Бөлім", ["Басты бет", "Жұмысты тексеру", "Мұғалім бекітуі", "Нәтижелер", "Статистика", "Балансты толтыру", "Қауіпсіздік"])
 
 if st.sidebar.button("🚪 Жүйеден шығу"):
     st.session_state.authenticated = False
@@ -235,7 +235,7 @@ elif menu == "Жұмысты тексеру":
         max_score = st.number_input(
             "Ең жоғары ұпай", 
             min_value=1.0, 
-            max_value=20.0,  # 20 балға дейін көтерілді
+            max_value=20.0, 
             value=20.0, 
             step=1.0
         )
@@ -246,7 +246,6 @@ elif menu == "Жұмысты тексеру":
 
     task_topic = st.text_input("Тапсырма тақырыбы немесе сұрақ", value=default_task)
 
-    # Автогенерация логикасы
     if auto_gen_clicked:
         with st.spinner("Жасанды интеллект дескрипторларды дайындауда..."):
             try:
@@ -275,7 +274,6 @@ elif menu == "Жұмысты тексеру":
     default_desc_text = st.session_state.get('generated_descriptors', default_desc)
     descriptors = st.text_area("Бағалау дескрипторлары (Өзгертуге болады)", value=default_desc_text, height=150)
     
-    # PDF ФАЙЛДАРЫН ДА ҚАБЫЛДАЙТЫН ФАЙЛ ЖҮКТЕУШІ
     uploaded_files = st.file_uploader("Оқушылардың жұмыс файлдарын жүктеу (JPG, PNG, PDF)", type=["jpg", "jpeg", "png", "pdf"], accept_multiple_files=True)
     
     if uploaded_files:
@@ -367,6 +365,39 @@ elif menu == "Статистика":
     else:
         df_stat = pd.DataFrame(rows)
         st.bar_chart(df_stat.set_index('student_code')[['teacher_score']])
+
+elif menu == "Балансты толтыру":
+    st.subheader("💳 Кредит сатып алу және балансты толтыру")
+    st.write("1 кредит = 50 ₸. Қажетті кредит санын таңдап, төлем жасаңыз.")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        credit_package = st.selectbox("Пакетті таңдаңыз:", [
+            "10 кредит (500 ₸)", 
+            "50 кредит (2,500 ₸)", 
+            "100 кредит (5,000 ₸)"
+        ])
+    
+    if "10 кредит" in credit_package:
+        amount = 500
+        credits = 10
+    elif "50 кредит" in credit_package:
+        amount = 2500
+        credits = 50
+    else:
+        amount = 5000
+        credits = 100
+        
+    st.markdown(f"**Төленетін сома:** {amount} ₸")
+    
+    if st.button("Kaspi Pay арқылы төлеу"):
+        st.info("Төмендегі QR кодты Kaspi қосымшасы арқылы сканерлеп төлеңіз:")
+        st.warning("Төлем жасап болған соң, төмендегі растау түймесін басыңыз.")
+        
+        if st.button("Төлемді растау (Тест режимі)"):
+            add_payment_record(current_user, amount, credits, "TEST_PAYMENT_123")
+            st.success(f"✅ Балансыңыз сәтті толықтырылды! +{credits} кредит қосылды.")
+            st.rerun()
 
 elif menu == "Қауіпсіздік":
     st.subheader("Қауіпсіздік және файл күйі (Диагностика)")
