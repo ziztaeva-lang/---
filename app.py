@@ -10,7 +10,7 @@ from security_layer import (
     init_db, save_pending_result, get_pending_results, 
     approve_result, get_approved_results, external_ai_is_enabled,
     get_user_credits, deduct_credit, verify_user, add_payment_record,
-    get_user_role
+    get_user_role, get_user_subject
 )
 
 st.set_page_config(page_title="SmartTest БЖБ–ТЖБ", layout="wide")
@@ -199,20 +199,39 @@ elif menu == "Жұмысты тексеру":
         "Информатика және жасанды интеллект", "Қазақстан тарихы", "Дүние жүзі тарихы"
     ]
 
+    # Дерекқордан мұғалімге бекітілген пәнді аламыз
+    assigned_subject = get_user_subject(current_user)
+
+    if not is_admin and assigned_subject:
+        # Егер бұл қарапайым мұғалім болса және оған пән берілген болса
+        st.info(f"🔒 Сізге бекітілген пән: **{assigned_subject}**")
+        all_subjects = [assigned_subject]
+    else:
+        # Әкімші (zoya) немесе пәні көрсетілмегендер барлық пәнді таңдай алады
+        if not specs_df.empty:
+            csv_grades = specs_df["grade"].dropna().astype(str).unique().tolist()
+            csv_subjects = specs_df["subject"].dropna().astype(str).unique().tolist()
+            all_grades = sorted(list(set(default_grades + csv_grades)))
+            all_subjects = sorted(list(set(default_subjects + csv_subjects)))
+        else:
+            all_grades = default_grades
+            all_subjects = default_subjects
+
     if not specs_df.empty:
         csv_grades = specs_df["grade"].dropna().astype(str).unique().tolist()
-        csv_subjects = specs_df["subject"].dropna().astype(str).unique().tolist()
         all_grades = sorted(list(set(default_grades + csv_grades)))
-        all_subjects = sorted(list(set(default_subjects + csv_subjects)))
     else:
         all_grades = default_grades
-        all_subjects = default_subjects
 
     col_s1, col_s2 = st.columns(2)
     with col_s1:
         selected_grade = st.selectbox("📌 Сыныпты таңдаңыз", all_grades)
     with col_s2:
-        selected_subject = st.selectbox("📌 Пәнді таңдаңыз", all_subjects)
+        # Егер қарапайым мұғалім болса, пән таңдау өрісі бекітіліп тұрады (disabled=True)
+        if not is_admin and assigned_subject:
+            selected_subject = st.selectbox("📌 Пәнді таңдаңыз", all_subjects, disabled=True)
+        else:
+            selected_subject = st.selectbox("📌 Пәнді таңдаңыз", all_subjects)
 
     prefix_text = "БЖБ" if "БЖБ" in assessment_type else "ТЖБ"
     bzhb_sub_num = ""
