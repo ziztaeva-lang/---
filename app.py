@@ -324,12 +324,11 @@ elif menu == "Жұмысты тексеру":
                 )
                 res_text = response.choices[0].message.content
                 
-                # Нәтижелерді парсерлеу
                 import re
                 t_match = re.search(r'\[ШАРТ\](.*?)\[/ШАРТ\]', res_text, re.DOTALL)
                 d_match = re.search(r'\[ДЕСКРИПТОР\](.*?)\[/ДЕСКРИПТОР\]', res_text, re.DOTALL)
                 a_match = re.search(r'\[МАҚСАТТАР_ҚОЛ_ЖЕТКІЗІЛГЕН\](.*?)\[/МАҚСАТТАР_ҚОЛ_ЖЕТКІЗІЛГЕН\]', res_text, re.DOTALL)
-                s_match = re.search(r'\[МАҚСАТТАР_ҚИЫНДЫҚ\](.*?)\[/МАҚСАТТАР_ҚИЫНДЫҚ\]', res_text, re.DOTALL)
+                s_match = re.search(r'\[МАҚСАТТАР_ҚИЫНДЫҚ\](.*?)\[/МАҚСАТТАР_ҚИЫНДЫҚ\]', res_text, res_text and re.DOTALL)
                 
                 if t_match:
                     task_topic = t_match.group(1).strip()
@@ -348,7 +347,6 @@ elif menu == "Жұмысты тексеру":
     default_desc_text = st.session_state.get('generated_descriptors', default_desc)
     descriptors = st.text_area("Бағалау дескрипторлары", value=default_desc_text, height=120)
     
-    # Жаңа талап бойынша қосылған графалар
     default_achieved_text = st.session_state.get('generated_achieved', default_achieved_goals)
     achieved_goals = st.text_area("🎯 Қол жеткізілген мақсаттар", value=default_achieved_text, height=90)
 
@@ -388,11 +386,14 @@ elif menu == "Жұмысты тексеру":
                                     images_b64 = process_uploaded_file(uploaded_file)
                                     
                                     prompt_text = f"""
+                                    Сен тәжірибелі мектеп мұғалімісің. Оқушының мына жұмысын берілген дескрипторлар мен ең жоғарғы баллға ({max_score}) сәйкес тексер.
                                     Тапсырма: {task_topic}
                                     Дескрипторлар: {descriptors}
-                                    Қол жеткізілген мақсаттар: {achieved_goals}
-                                    Қиындық тудырған мақсаттар: {struggling_goals}
-                                    Ең жоғарғы балл: {max_score}
+                                    
+                                    ТАЛАП: 
+                                    1. Әрбір тапсырма немесе сұрақ бойынша оқушының жауабын тексеріп, дұрыс жауаптарға жасыл белгі (🟢 [Дұрыс]), ал қате немесе толық емес жауаптарға қызыл белгі (🔴 [Қате]) қойып шық.
+                                    2. Неліктен қате екенін немесе дұрыс екенін қысқаша түсіндір.
+                                    3. Соңында жиынтық ұпайды көрсет.
                                     """
                                     messages_content = [{"type": "text", "text": prompt_text}]
                                     for img_b64 in images_b64:
@@ -404,10 +405,10 @@ elif menu == "Жұмысты тексеру":
                                     response = client.chat.completions.create(
                                         model="gpt-4o",
                                         messages=[
-                                            {"role": "system", "content": "Сіз тәжірибелі мектеп мұғалімісіз. Берілген мақсаттар, дескрипторлар мен ең жоғарғы баллға сәйкес оқушы жұмысын әділ тексеріп, ұпай мен толық кері байланыс беріңіз."},
+                                            {"role": "system", "content": "Сіз оқушы жұмыстарын қатаң әрі әділ тексеретін мектеп мұғалімісіз. Нәтижеде жасыл (🟢) және қызыл (🔴) белгілерді міндетті түрде қолданыңыз."},
                                             {"role": "user", "content": messages_content}
                                         ],
-                                        max_tokens=800
+                                        max_tokens=1000
                                     )
                                     
                                     st.session_state[ai_res_key] = response.choices[0].message.content
@@ -418,11 +419,13 @@ elif menu == "Жұмысты тексеру":
                                     st.error(f"Қате пайда болды: {e}")
 
                     prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=0.0, step=0.5, key=f"score_{idx}")
-                    explanation = st.text_area("Кері байланыс", value=st.session_state[ai_res_key], key=f"exp_{idx}")
+                    
+                    # Кері байланыс өрісі ЖИ нәтижесін тікелей көрсету үшін толтырылады
+                    explanation = st.text_area("Кері байланыс (🟢/🔴 белгілерімен)", value=st.session_state[ai_res_key], height=180, key=f"exp_{idx}")
                     
                     if st.button("💾 Тексеруге сақтау", key=f"save_btn_{idx}"):
                         if st_code.strip():
-                            full_feedback = f"Кері байланыс:\n{explanation.strip()}\n\n🎯 Қол жеткізілген мақсаттар:\n{achieved_goals.strip()}\n\n⚠️ Қиындық тудырған мақсаттар:\n{struggling_goals.strip()}"
+                            full_feedback = f"Кері байланыс мен белгілер:\n{explanation.strip()}\n\n🎯 Қол жеткізілген мақсаттар:\n{achieved_goals.strip()}\n\n⚠️ Қиындық тудырған мақсаттар:\n{struggling_goals.strip()}"
                             save_pending_result(
                                 st_code.strip(), 
                                 f"[{selected_term} | {prefix_text} | {selected_grade} - {selected_subject}] {task_topic.strip()}", 
