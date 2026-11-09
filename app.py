@@ -373,13 +373,23 @@ elif menu == "Жұмысты тексеру":
                                 except Exception as e:
                                     st.error(f"Қате пайда болды: {e}")
 
-                    with st.form(key=f"form_{idx}"):
-                        prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=0.0, step=0.5, key=f"score_{idx}")
-                        explanation = st.text_area("Кері байланыс", value=st.session_state[ai_res_key], key=f"exp_{idx}")
-                        if st.form_submit_button("Тексеруге сақтау"):
-                            if st_code.strip():
-                                save_pending_result(st_code.strip(), f"[{selected_term} | {prefix_text} | {selected_grade} - {selected_subject}] {task_topic.strip()}", descriptors.strip(), float(prop_score), float(max_score), explanation.strip())
-                                st.success("Сақталды!")
+                    # Форманы алып тастап, тікелей өрістер мен батырма жасау (Нәтиже экранынан жоғалмауы үшін)
+                    prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=0.0, step=0.5, key=f"score_{idx}")
+                    explanation = st.text_area("Кері байланыс", value=st.session_state[ai_res_key], key=f"exp_{idx}")
+                    
+                    if st.button("💾 Тексеруге сақтау", key=f"save_btn_{idx}"):
+                        if st_code.strip():
+                            save_pending_result(
+                                st_code.strip(), 
+                                f"[{selected_term} | {prefix_text} | {selected_grade} - {selected_subject}] {task_topic.strip()}", 
+                                descriptors.strip(), 
+                                float(prop_score), 
+                                float(max_score), 
+                                explanation.strip()
+                            )
+                            st.success("✅ Тексеруге сәтті сақталды!")
+                        else:
+                            st.error("❌ Оқушы кодын енгізіңіз!")
 
 elif menu == "Мұғалім бекітуі":
     st.subheader("Мұғалімнің қорытынды бағасын бекіту")
@@ -423,3 +433,53 @@ elif menu == "Балансты толтыру":
     
     st.markdown("---")
     st.info(f"📱 **Төлем жасау қадамдары:**\n1. Төмендегі QR кодтардың бірін (Kaspi немесе Halyk) сканерлеңіз.\n2. Көрсетілген соманы (**{amount:,.0f} ₸**) аударыңыз.\n3. Төлем чегіндегі **транзакция / чек нөмірін** төмендегі өріске енгізіп, растауға жіберіңіз.")
+    
+    qr_col1, qr_col2 = st.columns(2)
+    
+    with qr_col1:
+        st.write("### 🟡 Kaspi QR арқылы төлеу")
+        if os.path.exists("kaspi_qr_ИЗС.png"):
+            st.image("kaspi_qr_ИЗС.png", caption="SmartTest — Kaspi Pay QR", width=260)
+        else:
+            st.warning("⚠️ `kaspi_qr_ИЗС.png` файлы табылмады.")
+            
+    with qr_col2:
+        st.write("### 🟢 Halyk QR арқылы төлеу")
+        if os.path.exists("halyk_qr_ЫРЫС.png"):
+            st.image("halyk_qr_ЫРЫС.png", caption="SmartTest — Halyk QR", width=260)
+        else:
+            st.warning("⚠️ `halyk_qr_ЫРЫС.png` суретін жоба папкасына салыңыз.")
+    
+    with st.form("payment_verification_form"):
+        st.write("### Төлемді растау үшін деректерді енгізіңіз:")
+        txn_id = st.text_input("Kaspi немесе Halyk транзакция/чек нөмірі", placeholder="Чектегі транзакция немесе операция нөмірін жазыңыз...")
+        
+        submit_payment = st.form_submit_button("📤 Төлем туралы хабарлау")
+        
+        if submit_payment:
+            if not txn_id.strip():
+                st.error("❌ Дұрыс транзакция нөмірін енгізіңіз!")
+            else:
+                try:
+                    add_payment_record(current_user, amount, float(credits_to_buy), txn_id.strip())
+                    st.success(f"✅ Төлем туралы өтінім қабылданды! Транзакция коды: {txn_id}. Әкімші (Zoya) тексергеннен кейін балансыңызға {credits_to_buy} кредит қосылады.")
+                except Exception as e:
+                    st.error(f"Қате орын алды: {e}")
+
+elif menu == "Қауіпсіздік":
+    if not is_admin:
+        st.error("⛔ Бұл бетке тек әкімші (admin) ғана кіре алады!")
+        st.stop()
+
+    st.subheader("Қауіпсіздік және файл күйі (Диагностика)")
+    st.write(f"Ағымдағы пайдаланушы: **{current_user}** | Баланс: **{user_balance} кредит** ({total_tenge:,.0f} ₸)")
+    st.markdown("---")
+    
+    if not specs_df.empty:
+        st.success(f"✅ Спецификация файлы сәтті оқылды! Жалпы жолдар саны: **{len(specs_df)}**")
+        st.write("**Файлдағы табылған бағандар:**", list(specs_df.columns))
+        st.dataframe(specs_df.head(5))
+    else:
+        st.error("❌ Спецификация файлы табылмады немесе баған атаулары қате.")
+        for log in load_logs:
+            st.warning(log)
