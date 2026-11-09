@@ -146,7 +146,7 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 current_user = st.session_state.get("username", "teacher")
 user_balance = get_user_credits(current_user)
 price_per_credit = 100  
-total_tenge = user_balance * price_per_credit  # Толық түзетілген жол
+total_tenge = user_balance * price_per_credit
 
 user_role = get_user_role(current_user)
 is_admin = (user_role == "admin" or current_user.lower() == "zoya")
@@ -333,4 +333,93 @@ elif menu == "Жұмысты тексеру":
                             image = Image.open(uploaded_file)
                             st.image(image, caption=uploaded_file.name, use_container_width=True)
                         except Exception:
-                            st.error("Суретті
+                            st.error("Суретті ашу мүмкін болмады.")
+                with col_form:
+                    st_code = st.text_input("Анонимді оқушы коды", value=f"{selected_grade}-0{idx+1}", key=f"code_{idx}")
+                    
+                    ai_res_key = f"ai_result_{idx}"
+                    if ai_res_key not in st.session_state:
+                        st.session_state[ai_res_key] = "Бағаны мұғалім тексеруі қажет."
+
+                    if st.button("🔍 ЖИ арқылы талдау", key=f"ai_btn_{idx}"):
+                        current_balance = get_user_credits(current_user)
+                        if current_balance < 1.0:
+                            st.error("❌ Балансыңызда кредит жеткіліксіз!")
+                        else:
+                            with st.spinner("ЖИ файлды талдап жатыр..."):
+                                try:
+                                    images_b64 = process_uploaded_file(uploaded_file)
+                                    
+                                    messages_content = [{"type": "text", "text": f"Тапсырма: {task_topic}\nДескрипторлар: {descriptors}\nЕң жоғарғы балл: {max_score}"}]
+                                    for img_b64 in images_b64:
+                                        messages_content.append({
+                                            "type": "image_url",
+                                            "image_url": {"url": f"data:image/png;base64,{img_b64}"}
+                                        })
+
+                                    response = client.chat.completions.create(
+                                        model="gpt-4o",
+                                        messages=[
+                                            {"role": "system", "content": "Сіз тәжірибелі мектеп мұғалімісіз. Берілген дескрипторлар мен ең жоғарғы баллға сәйкес оқушы жұмысын әділ тексеріп, ұпай мен кері байланыс беріңіз."},
+                                            {"role": "user", "content": messages_content}
+                                        ],
+                                        max_tokens=800
+                                    )
+                                    
+                                    st.session_state[ai_res_key] = response.choices[0].message.content
+                                    deduct_credit(current_user, amount=1.0)
+                                    st.success("Талдау сәтті жасалды (-1 кредит)!")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Қате пайда болды: {e}")
+
+                    with st.form(key=f"form_{idx}"):
+                        prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=0.0, step=0.5, key=f"score_{idx}")
+                        explanation = st.text_area("Кері байланыс", value=st.session_state[ai_res_key], key=f"exp_{idx}")
+                        if st.form_submit_button("Тексеруге сақтау"):
+                            if st_code.strip():
+                                save_pending_result(st_code.strip(), f"[{selected_term} | {prefix_text} | {selected_grade} - {selected_subject}] {task_topic.strip()}", descriptors.strip(), float(prop_score), float(max_score), explanation.strip())
+                                st.success("Сақталды!")
+
+elif menu == "Мұғалім бекітуі":
+    st.subheader("Мұғалімнің қорытынды бағасын бекіту")
+    pending = get_pending_results()
+    if not pending:
+        st.info("Бекітуді күтіп тұрған жұмыс жоқ.")
+    for item in pending:
+        with st.expander(f"Жұмыс: {item['student_code']} — {item['proposed_score']} балл"):
+            score = st.number_input("Бекітілетін ұпай", value=float(item['proposed_score']), key="app_" + item["id"])
+            comment = st.text_area("Ескертпе", key="com_" + item["id"])
+            if st.button("Бекіту", key="btn_" + item["id"]):
+                approve_result(item["id"], score, current_user, comment)
+                st.rerun()
+
+elif menu == "Нәтижелер":
+    st.subheader("Мұғалім бекіткен нәтижелер")
+    rows = get_approved_results()
+    if not rows:
+        st.info("Әзірге нәтиже жоқ.")
+    else:
+        df_res = pd.DataFrame(rows)
+        st.dataframe(df_res)
+
+elif menu == "Статистика":
+    st.subheader("📊 Статистика")
+    rows = get_approved_results()
+    if not rows:
+        st.info("Әзірге статистика жоқ.")
+    else:
+        df_stat = pd.DataFrame(rows)
+        st.bar_chart(df_stat.set_index('student_code')[['teacher_score']])
+
+elif menu == "Балансты толтыру":
+    st.subheader("💳 Кредит сатып алу және балансты толтыру")
+    st.write("1 кредит = 100 ₸. Қалаған кредит санын енгізіп, төлем жасаңыз.")
+    
+    credits_to_buy = st.number_input("Сатып алғыңыз келетін кредит саны:", min_value=1, max_value=1000, value=10, step=1)
+    amount = credits_to_buy * 100
+    
+    st.markdown(f"**Төленетін жалпы сома:** <span style='color: #10b981; font-size: 20px; font-weight: bold;'>{amount:,.0f} ₸</span>", unsafe_allow_html=True)
+    
+    st.markdown("---")
+    st.info(f"📱 **Төлем жасау қадамдары:**\n1. Төмендегі QR кодтардың бірін (Kaspi немесе Halyk) сканерлеңіз.\n2. Көрсетілген соманы (**{amount:,.0f} ₸**) аударыңыз.\n3. Төлем чегіндегі **транзакция / чек нөмірін** төмендегі өріске енгізіп, растауға жіберіңіз.")
