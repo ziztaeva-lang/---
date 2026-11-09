@@ -382,19 +382,23 @@ elif menu == "Жұмысты тексеру":
                         if not is_admin and current_balance < 1.0:
                             st.error("❌ Балансыңызда кредит жеткіліксіз!")
                         else:
-                            with st.spinner("ЖИ файлды талдап жатыр..."):
+                            with st.spinner("ЖИ әрбір тапсырманы жеке-жеке талдап жатыр..."):
                                 try:
                                     images_b64 = process_uploaded_file(uploaded_file)
                                     
                                     prompt_text = f"""
-                                    Сен тәжірибелі мектеп мұғалімісің. Оқушының мына жұмысын берілген дескрипторлар мен ең жоғарғы баллға ({max_score}) сәйкес тексер.
-                                    Тапсырма: {task_topic}
+                                    Сен Қазақстан мектептерінің тәжірибелі мұғалімі әрі сарапшысың. Оқушының мына жұмысын берілген дескрипторлар мен ең жоғарғы баллға ({max_score}) сәйкес мұқият тексер.
+                                    Тапсырма тақырыбы: {task_topic}
                                     Дескрипторлар: {descriptors}
+                                    Қол жеткізілген мақсаттар: {achieved_goals}
+                                    Қиындық тудырған мақсаттар: {struggling_goals}
                                     
-                                    ТАЛАП: 
-                                    1. Әрбір тапсырма немесе сұрақ бойынша оқушының жауабын тексеріп, дұрыс жауаптарға жасыл белгі (🟢 [Дұрыс]), ал қате немесе толық емес жауаптарға қызыл белгі (🔴 [Қате]) қойып шық.
-                                    2. Неліктен қате екенін немесе дұрыс екенін қысқаша түсіндір.
-                                    3. Соңында жиынтық ұпайды көрсет.
+                                    НАҚТЫ ТАЛАПТАР:
+                                    1. Жұмыстағы әрбір тапсырманы және оның тармақтарын (1-тапсырма, 2-тапсырма, а, б, в, г т.б.) бөлек-бөлек қарастыр.
+                                    2. Әр тапсырманың астына оқушы жауабын тексеріп:
+                                       - Дұрыс болса: 🟢 [Дұрыс] (неліктен дұрыс екенін қысқаша түсіндір)
+                                       - Қате болса: 🔴 [Қате] (қай жерде қате кеткенін және дұрыс есептелуін түсіндір)
+                                    3. Соңында осы жұмыс бойынша жиынтық баллды көрсет.
                                     """
                                     messages_content = [{"type": "text", "text": prompt_text}]
                                     for img_b64 in images_b64:
@@ -406,22 +410,22 @@ elif menu == "Жұмысты тексеру":
                                     response = client.chat.completions.create(
                                         model="gpt-4o",
                                         messages=[
-                                            {"role": "system", "content": "Сіз оқушы жұмыстарын қатаң әрі әділ тексеретін мектеп мұғалімісіз. Нәтижеде жасыл (🟢) және қызыл (🔴) белгілерді міндетті түрде қолданыңыз."},
+                                            {"role": "system", "content": "Сіз оқушы жұмыстарын әрбір тапсырма мен тармақ бойынша жіліктеп, 🟢 [Дұрыс] және 🔴 [Қате] белгілерімен тексеретін мұғалімсіз."},
                                             {"role": "user", "content": messages_content}
                                         ],
-                                        max_tokens=1000
+                                        max_tokens=1200
                                     )
                                     
                                     st.session_state[ai_res_key] = response.choices[0].message.content
                                     if not is_admin:
                                         deduct_credit(current_user, amount=1.0)
-                                    st.success("Талдау сәтті жасалды!")
+                                    st.success("✅ Тексеру сәтті аяқталды!")
                                     st.rerun()
                                 except Exception as e:
                                     st.error(f"Қате пайда болды: {e}")
 
                     prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=0.0, step=0.5, key=f"score_{idx}")
-                    explanation = st.text_area("Кері байланыс (🟢/🔴 белгілерімен)", value=st.session_state[ai_res_key], height=180, key=f"exp_{idx}")
+                    explanation = st.text_area("Кері байланыс (🟢/🔴 белгілерімен)", value=st.session_state[ai_res_key], height=200, key=f"exp_{idx}")
                     
                     if st.button("💾 Тексеруге сақтау", key=f"save_btn_{idx}"):
                         if st_code.strip():
