@@ -232,9 +232,11 @@ elif menu == "Жұмысты тексеру":
     if prefix_text == "БЖБ":
         bzhb_sub_num = st.selectbox("📌 БЖБ нөмірін таңдаңыз:", ["БЖБ 1", "БЖБ 2", "БЖБ 3"])
 
-    # --- БЖБ МЕН ТЖБ ТАҚЫРЫПТАРЫН ФАЙЛДАН АВТОМАТТЫ ТҮРДЕ ШЫҚТЫРУ ---
+    # --- АВТОМАТТЫ ТҮРДЕ ТАҚЫРЫП, ДЕСКРИПТОР ЖӘНЕ МАҚСАТТАРДЫ ШЫҚТЫРУ ---
     default_task = f"{selected_grade}, {selected_term}. {selected_subject} пәні бойынша {prefix_text} тапсырмасы."
     default_desc = "1. Тапсырма шартын түсініп орындайды (10 балл);\n2. Жауабын жүйелі түрде негіздеп жазады (10 балл)."
+    default_achieved_goals = f"Оқушы {selected_subject} пәні бойынша {selected_term} бағдарламасындағы негізгі ұғымдарды түсініп, тапсырмаларды орындау дағдыларын меңгергенін көрсетеді."
+    default_struggling_goals = "Формулаларды қолдануда немесе есептеу барысында жіберілетін ұсақ қателіктерді түзету."
 
     if not specs_df.empty:
         temp_df = specs_df.copy()
@@ -266,9 +268,13 @@ elif menu == "Жұмысты тексеру":
             row = filtered.iloc[0]
             default_task = str(row["task"]) if "task" in row and pd.notna(row["task"]) else default_task
             default_desc = str(row["desc"]) if "desc" in row and pd.notna(row["desc"]) else default_desc
+            if "achieved_goals" in row and pd.notna(row["achieved_goals"]):
+                default_achieved_goals = str(row["achieved_goals"])
+            if "struggling_goals" in row and pd.notna(row["struggling_goals"]):
+                default_struggling_goals = str(row["struggling_goals"])
 
     st.markdown("---")
-    st.subheader("⚙️ Тапсырма мен дескриптор параметрлері")
+    st.subheader("⚙️ Тапсырма, дескриптор және оқу мақсаттары параметрлері")
     
     col_score, col_gen_btn = st.columns([1, 2])
     with col_score:
@@ -282,12 +288,12 @@ elif menu == "Жұмысты тексеру":
     with col_gen_btn:
         st.write("")
         st.write("")
-        auto_gen_clicked = st.button("✨ Дескриптор мен шартты автоматты генерациялау")
+        auto_gen_clicked = st.button("✨ Дескриптор, шарт пен мақсаттарды автоматты генерациялау")
 
     task_topic = st.text_input("Тапсырма тақырыбы немесе сұрақ", value=default_task)
 
     if auto_gen_clicked:
-        with st.spinner("Жасанды интеллект мектеп стандартына сай дескрипторларды дайындауда..."):
+        with st.spinner("Жасанды интеллект мектеп стандартына сай мақсаттар мен дескрипторларды дайындауда..."):
             try:
                 prompt = f"""
                 Сен Қазақстан Республикасының орта білім беру мазмұны, БЖБ және ТЖБ өткізу ережелерін жеткізетін тәжірибелі мектеп мұғалімі әрі әдіскерсің.
@@ -299,10 +305,16 @@ elif menu == "Жұмысты тексеру":
                 - Жалпы ең жоғарғы ұпай: {int(max_score)} балл.
                 
                 Осы деректер негізінде Қазақстан мектептеріндегі критериалды бағалау жүйесіне қатаң сәйкес келетін:
-                1. Оқу бағдарламасына (Типтік оқу жоспарына) сай нақты тапсырма шартын немесе нұсқауын.
-                2. {int(max_score)} балдық жүйеге дәл бөлінген, әрбір критерий мен балдары нақты көрсетілген мектептік бағалау дескрипторларын құрастырып бер.
+                1. Нақты тапсырма шартын немесе нұсқауын.
+                2. {int(max_score)} балдық жүйеге дәл бөлінген бағалау дескрипторларын.
+                3. Осы жұмыс арқылы "Қол жеткізілген мақсаттар" (оқушылар жақсы меңгерген дағдылар).
+                4. "Қиындық тудырған мақсаттар" (қосымша пысықтауды қажет ететін тұстар).
                 
-                Ескерту: Жауап тек қазақ тілінде, мектеп мұғалімдері қолданатын ресми әдістемелік стильде, артық сөзсіз нақты форматта жазылсын.
+                Жауапты нақты мына форматта бөлек бөліп бер:
+                [ШАРТ] ... [/ШАРТ]
+                [ДЕСКРИПТОР] ... [/ДЕСКРИПТОР]
+                [МАҚСАТТАР_ҚОЛ_ЖЕТКІЗІЛГЕН] ... [/МАҚСАТТАР_ҚОЛ_ЖЕТКІЗІЛГЕН]
+                [МАҚСАТТАР_ҚИЫНДЫҚ] ... [/МАҚСАТТАР_ҚИЫНДЫҚ]
                 """
                 
                 response = client.chat.completions.create(
@@ -310,14 +322,39 @@ elif menu == "Жұмысты тексеру":
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.2
                 )
-                st.session_state['generated_descriptors'] = response.choices[0].message.content
-                st.success("✅ Мектеп стандартына сай дескрипторлар генерацияланды!")
+                res_text = response.choices[0].message.content
+                
+                # Нәтижелерді парсерлеу
+                import re
+                t_match = re.search(r'\[ШАРТ\](.*?)\[/ШАРТ\]', res_text, re.DOTALL)
+                d_match = re.search(r'\[ДЕСКРИПТОР\](.*?)\[/ДЕСКРИПТОР\]', res_text, re.DOTALL)
+                a_match = re.search(r'\[МАҚСАТТАР_ҚОЛ_ЖЕТКІЗІЛГЕН\](.*?)\[/МАҚСАТТАР_ҚОЛ_ЖЕТКІЗІЛГЕН\]', res_text, re.DOTALL)
+                s_match = re.search(r'\[МАҚСАТТАР_ҚИЫНДЫҚ\](.*?)\[/МАҚСАТТАР_ҚИЫНДЫҚ\]', res_text, re.DOTALL)
+                
+                if t_match:
+                    task_topic = t_match.group(1).strip()
+                if d_match:
+                    st.session_state['generated_descriptors'] = d_match.group(1).strip()
+                if a_match:
+                    st.session_state['generated_achieved'] = a_match.group(1).strip()
+                if s_match:
+                    st.session_state['generated_struggling'] = s_match.group(1).strip()
+                
+                st.success("✅ Мектеп стандартына сай мақсаттар мен дескрипторлар генерацияланды!")
+                st.rerun()
             except Exception as e:
                 st.error(f"Генерация қатесі: {e}")
 
     default_desc_text = st.session_state.get('generated_descriptors', default_desc)
-    descriptors = st.text_area("Бағалау дескрипторлары", value=default_desc_text, height=150)
+    descriptors = st.text_area("Бағалау дескрипторлары", value=default_desc_text, height=120)
     
+    # Жаңа талап бойынша қосылған графалар
+    default_achieved_text = st.session_state.get('generated_achieved', default_achieved_goals)
+    achieved_goals = st.text_area("🎯 Қол жеткізілген мақсаттар", value=default_achieved_text, height=90)
+
+    default_struggling_text = st.session_state.get('generated_struggling', default_struggling_goals)
+    struggling_goals = st.text_area("⚠️ Қиындық тудырған мақсаттар", value=default_struggling_text, height=90)
+
     uploaded_files = st.file_uploader("Оқушылардың жұмыс файлдарын жүктеу (JPG, PNG, PDF)", type=["jpg", "jpeg", "png", "pdf"], accept_multiple_files=True)
     
     if uploaded_files:
@@ -350,7 +387,14 @@ elif menu == "Жұмысты тексеру":
                                 try:
                                     images_b64 = process_uploaded_file(uploaded_file)
                                     
-                                    messages_content = [{"type": "text", "text": f"Тапсырма: {task_topic}\nДескрипторлар: {descriptors}\nЕң жоғарғы балл: {max_score}"}]
+                                    prompt_text = f"""
+                                    Тапсырма: {task_topic}
+                                    Дескрипторлар: {descriptors}
+                                    Қол жеткізілген мақсаттар: {achieved_goals}
+                                    Қиындық тудырған мақсаттар: {struggling_goals}
+                                    Ең жоғарғы балл: {max_score}
+                                    """
+                                    messages_content = [{"type": "text", "text": prompt_text}]
                                     for img_b64 in images_b64:
                                         messages_content.append({
                                             "type": "image_url",
@@ -360,7 +404,7 @@ elif menu == "Жұмысты тексеру":
                                     response = client.chat.completions.create(
                                         model="gpt-4o",
                                         messages=[
-                                            {"role": "system", "content": "Сіз тәжірибелі мектеп мұғалімісіз. Берілген дескрипторлар мен ең жоғарғы баллға сәйкес оқушы жұмысын әділ тексеріп, ұпай мен кері байланыс беріңіз."},
+                                            {"role": "system", "content": "Сіз тәжірибелі мектеп мұғалімісіз. Берілген мақсаттар, дескрипторлар мен ең жоғарғы баллға сәйкес оқушы жұмысын әділ тексеріп, ұпай мен толық кері байланыс беріңіз."},
                                             {"role": "user", "content": messages_content}
                                         ],
                                         max_tokens=800
@@ -373,19 +417,19 @@ elif menu == "Жұмысты тексеру":
                                 except Exception as e:
                                     st.error(f"Қате пайда болды: {e}")
 
-                    # Форманы алып тастап, тікелей өрістер мен батырма жасау (Нәтиже экранынан жоғалмауы үшін)
                     prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=0.0, step=0.5, key=f"score_{idx}")
                     explanation = st.text_area("Кері байланыс", value=st.session_state[ai_res_key], key=f"exp_{idx}")
                     
                     if st.button("💾 Тексеруге сақтау", key=f"save_btn_{idx}"):
                         if st_code.strip():
+                            full_feedback = f"Кері байланыс:\n{explanation.strip()}\n\n🎯 Қол жеткізілген мақсаттар:\n{achieved_goals.strip()}\n\n⚠️ Қиындық тудырған мақсаттар:\n{struggling_goals.strip()}"
                             save_pending_result(
                                 st_code.strip(), 
                                 f"[{selected_term} | {prefix_text} | {selected_grade} - {selected_subject}] {task_topic.strip()}", 
                                 descriptors.strip(), 
                                 float(prop_score), 
                                 float(max_score), 
-                                explanation.strip()
+                                full_feedback
                             )
                             st.success("✅ Тексеруге сәтті сақталды!")
                         else:
