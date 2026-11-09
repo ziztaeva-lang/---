@@ -375,7 +375,7 @@ elif menu == "Жұмысты тексеру":
                     if ai_res_key not in st.session_state:
                         st.session_state[ai_res_key] = "Бағаны мұғалім тексеруі қажет."
 
-                    if st.button("🔍 Тереңірек талдау", key=f"ai_btn_{idx}"):
+                    if st.button("🔍 Тереңірек талдау жасау", key=f"ai_btn_{idx}"):
                         current_balance = get_user_credits(current_user)
                         
                         # Admin немесе Zoya үшін кредит тегін/шексіз тексеріледі
