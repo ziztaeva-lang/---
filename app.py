@@ -78,7 +78,7 @@ def process_uploaded_file(uploaded_file):
         
     return images_b64
 
-# --- СПЕЦИФИКАЦИЯ ФАЙЛЫН ОҚУ ---
+# --- СПЕЦИФИКАЦИЯ ФАЙЛЫН ОҚУ (КЕШТЕУ АРҚЫЛЫ ЖЫЛДАМДАТУ) ---
 @st.cache_data
 def load_specs():
     possible_files = [
@@ -203,11 +203,9 @@ elif menu == "Жұмысты тексеру":
     assigned_subject = get_user_subject(current_user)
 
     if not is_admin and assigned_subject:
-        # Егер бұл қарапайым мұғалім болса және оған пән берілген болса
         st.info(f"🔒 Сізге бекітілген пән: **{assigned_subject}**")
         all_subjects = [assigned_subject]
     else:
-        # Әкімші (zoya) немесе пәні көрсетілмегендер барлық пәнді таңдай алады
         if not specs_df.empty:
             csv_grades = specs_df["grade"].dropna().astype(str).unique().tolist()
             csv_subjects = specs_df["subject"].dropna().astype(str).unique().tolist()
@@ -227,7 +225,6 @@ elif menu == "Жұмысты тексеру":
     with col_s1:
         selected_grade = st.selectbox("📌 Сыныпты таңдаңыз", all_grades)
     with col_s2:
-        # Егер қарапайым мұғалім болса, пән таңдау өрісі бекітіліп тұрады (disabled=True)
         if not is_admin and assigned_subject:
             selected_subject = st.selectbox("📌 Пәнді таңдаңыз", all_subjects, disabled=True)
         else:
@@ -302,163 +299,4 @@ elif menu == "Жұмысты тексеру":
                 st.error(f"Генерация қатесі: {e}")
 
     default_desc_text = st.session_state.get('generated_descriptors', default_desc)
-    descriptors = st.text_area("Бағалау дескрипторлары (Өзгертуге болады)", value=default_desc_text, height=150)
-    
-    uploaded_files = st.file_uploader("Оқушылардың жұмыс файлдарын жүктеу (JPG, PNG, PDF)", type=["jpg", "jpeg", "png", "pdf"], accept_multiple_files=True)
-    
-    if uploaded_files:
-        st.success(f"Барлығы {len(uploaded_files)} файл жүктелді.")
-        for idx, uploaded_file in enumerate(uploaded_files):
-            with st.expander(f"📁 Жұмыс №{idx+1}: {uploaded_file.name}"):
-                col_img, col_form = st.columns([1, 1])
-                with col_img:
-                    if uploaded_file.name.lower().endswith('.pdf'):
-                        st.info("📄 PDF форматындағы документ жүктелді.")
-                    else:
-                        try:
-                            image = Image.open(uploaded_file)
-                            st.image(image, caption=uploaded_file.name, use_container_width=True)
-                        except Exception:
-                            st.error("Суретті ашу мүмкін болмады.")
-                with col_form:
-                    st_code = st.text_input("Анонимді оқушы коды", value=f"{selected_grade}-0{idx+1}", key=f"code_{idx}")
-                    ai_exp = "Бағаны мұғалім тексеруі қажет."
-
-                    if st.button("🔍 ЖИ арқылы талдау", key=f"ai_btn_{idx}"):
-                        current_balance = get_user_credits(current_user)
-                        if current_balance < 1.0:
-                            st.error("❌ Балансыңызда кредит жеткіліксіз!")
-                        else:
-                            with st.spinner("ЖИ файлды талдап жатыр..."):
-                                try:
-                                    images_b64 = process_uploaded_file(uploaded_file)
-                                    
-                                    messages_content = [{"type": "text", "text": f"Тапсырма: {task_topic}\nДескрипторлар: {descriptors}\nЕң жоғарғы балл: {max_score}"}]
-                                    for img_b64 in images_b64:
-                                        messages_content.append({
-                                            "type": "image_url",
-                                            "image_url": {"url": f"data:image/png;base64,{img_b64}"}
-                                        })
-
-                                    response = client.chat.completions.create(
-                                        model="gpt-4o",
-                                        messages=[
-                                            {"role": "system", "content": "Сіз тәжірибелі мектеп мұғалімісіз. Берілген дескрипторлар мен ең жоғарғы баллға сәйкес оқушы жұмысын әділ тексеріп, ұпай мен кері байланыс беріңіз."},
-                                            {"role": "user", "content": messages_content}
-                                        ],
-                                        max_tokens=800
-                                    )
-                                    ai_exp = response.choices[0].message.content
-                                    
-                                    deduct_credit(current_user, amount=1.0)
-                                    st.success("Талдау сәтті жасалды (-1 кредит)!")
-                                    st.write(ai_exp)
-                                    st.rerun()
-                                except Exception as e:
-                                    st.error(f"Қате пайда болды: {e}")
-
-                    with st.form(key=f"form_{idx}"):
-                        prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=0.0, step=0.5, key=f"score_{idx}")
-                        explanation = st.text_area("Кері байланыс", value=ai_exp, key=f"exp_{idx}")
-                        if st.form_submit_button("Тексеруге сақтау"):
-                            if st_code.strip():
-                                save_pending_result(st_code.strip(), f"[{selected_term} | {prefix_text} | {selected_grade} - {selected_subject}] {task_topic.strip()}", descriptors.strip(), float(prop_score), float(max_score), explanation.strip())
-                                st.success("Сақталды!")
-
-elif menu == "Мұғалім бекітуі":
-    st.subheader("Мұғалімнің қорытынды бағасын бекіту")
-    pending = get_pending_results()
-    if not pending:
-        st.info("Бекітуді күтіп тұрған жұмыс жоқ.")
-    for item in pending:
-        with st.expander(f"Жұмыс: {item['student_code']} — {item['proposed_score']} балл"):
-            score = st.number_input("Бекітілетін ұпай", value=float(item['proposed_score']), key="app_" + item["id"])
-            comment = st.text_area("Ескертпе", key="com_" + item["id"])
-            if st.button("Бекіту", key="btn_" + item["id"]):
-                approve_result(item["id"], score, current_user, comment)
-                st.rerun()
-
-elif menu == "Нәтижелер":
-    st.subheader("Мұғалім бекіткен нәтижелер")
-    rows = get_approved_results()
-    if not rows:
-        st.info("Әзірге нәтиже жоқ.")
-    else:
-        df_res = pd.DataFrame(rows)
-        st.dataframe(df_res)
-
-elif menu == "Статистика":
-    st.subheader("📊 Статистика")
-    rows = get_approved_results()
-    if not rows:
-        st.info("Әзірге статистика жоқ.")
-    else:
-        df_stat = pd.DataFrame(rows)
-        st.bar_chart(df_stat.set_index('student_code')[['teacher_score']])
-
-elif menu == "Балансты толтыру":
-    st.subheader("💳 Кредит сатып алу және балансты толтыру")
-    st.write("1 кредит = 100 ₸. Қалаған кредит санын енгізіп, төлем жасаңыз.")
-    
-    # Мұғалім өз қалауынша кредит санын енгізеді (1 кредит = 100 ₸)
-    credits_to_buy = st.number_input("Сатып алғыңыз келетін кредит саны:", min_value=1, max_value=1000, value=10, step=1)
-    
-    # Төленетін соманы автоматты есептеу
-    amount = credits_to_buy * 100
-    
-    st.markdown(f"**Төленетін жалпы сома:** <span style='color: #10b981; font-size: 20px; font-weight: bold;'>{amount:,.0f} ₸</span>", unsafe_allow_html=True)
-    
-    st.markdown("---")
-    st.info(f"📱 **Төлем жасау қадамдары:**\n1. Төмендегі QR кодтардың бірін (Kaspi немесе Halyk) сканерлеңіз.\n2. Көрсетілген соманы (**{amount:,.0f} ₸**) аударыңыз.\n3. Төлем чегіндегі **транзакция / чек нөмірін** төмендегі өріске енгізіп, растауға жіберіңіз.")
-    
-    # QR кодтарды қатар шығару (Kaspi және Halyk)
-    qr_col1, qr_col2 = st.columns(2)
-    
-    with qr_col1:
-        st.write("### 🟡 Kaspi QR арқылы төлеу")
-        if os.path.exists("kaspi_qr_ИЗС.png"):
-            st.image("kaspi_qr_ИЗС.png", caption="SmartTest — Kaspi Pay QR", width=260)
-        else:
-            st.warning("⚠️ `kaspi_qr_ИЗС.png` файлы табылмады.")
-            
-    with qr_col2:
-        st.write("### 🟢 Halyk QR арқылы төлеу")
-        if os.path.exists("halyk_qr_ЫРЫС.png"):
-            st.image("halyk_qr_ЫРЫС.png", caption="SmartTest — Halyk QR", width=260)
-        else:
-            st.warning("⚠️ `halyk_qr_ЫРЫС.png` суретін жоба папкасына салыңыз.")
-    
-    # Қауіпсіз төлем сұранысын жіберу формасы
-    with st.form("payment_verification_form"):
-        st.write("### Төлемді растау үшін деректерді енгізіңіз:")
-        txn_id = st.text_input("Kaspi немесе Halyk транзакция/чек нөмірі", placeholder="Чектегі транзакция немесе операция нөмірін жазыңыз...")
-        
-        submit_payment = st.form_submit_button("📤 Төлем туралы хабарлау")
-        
-        if submit_payment:
-            if not txn_id.strip():
-                st.error("❌ Дұрыс транзакция нөмірін енгізіңіз!")
-            else:
-                try:
-                    add_payment_record(current_user, amount, float(credits_to_buy), txn_id.strip())
-                    st.success(f"✅ Төлем туралы өтінім қабылданды! Транзакция коды: {txn_id}. Әкімші (Zoya) тексергеннен кейін балансыңызға {credits_to_buy} кредит қосылады.")
-                except Exception as e:
-                    st.error(f"Қате орын алды: {e}")
-
-elif menu == "Қауіпсіздік":
-    if not is_admin:
-        st.error("⛔ Бұл бетке тек әкімші (admin) ғана кіре алады!")
-        st.stop()
-
-    st.subheader("Қауіпсіздік және файл күйі (Диагностика)")
-    st.write(f"Ағымдағы пайдаланушы: **{current_user}** | Баланс: **{user_balance} кредит** ({total_tenge:,.0f} ₸)")
-    st.markdown("---")
-    
-    if not specs_df.empty:
-        st.success(f"✅ Спецификация файлы сәтті оқылды! Жалпы жолдар саны: **{len(specs_df)}**")
-        st.write("**Файлдағы табылған бағандар:**", list(specs_df.columns))
-        st.dataframe(specs_df.head(5))
-    else:
-        st.error("❌ Спецификация файлы табылмады немесе баған атаулары қате.")
-        for log in load_logs:
-            st.warning(log)
+    descriptors = st.text_area("Бағалау дескрипторлары (Өзгерту
