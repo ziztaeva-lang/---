@@ -78,7 +78,7 @@ def process_uploaded_file(uploaded_file):
         
     return images_b64
 
-# --- СПЕЦИФИКАЦИЯ ФАЙЛЫН ОҚУ (КЕШТЕУ АРҚЫЛЫ ЖЫЛДАМДАТУ) ---
+# --- СПЕЦИФИКАЦИЯ ФАЙЛЫН ОҚУ ---
 @st.cache_data
 def load_specs():
     possible_files = [
@@ -149,7 +149,7 @@ price_per_credit = 100
 total_tenge = user_balance * price_per_credit
 
 user_role = get_user_role(current_user)
-is_admin = (user_role == "admin" or current_user.lower() == "zoya")
+is_admin = (user_role == "admin" or current_user.lower() in ["zoya", "admin"])
 
 st.sidebar.title("SmartTest")
 st.sidebar.markdown(f"👤 **Қолданушы:** {current_user}")
@@ -232,7 +232,6 @@ elif menu == "Жұмысты тексеру":
     if prefix_text == "БЖБ":
         bzhb_sub_num = st.selectbox("📌 БЖБ нөмірін таңдаңыз:", ["БЖБ 1", "БЖБ 2", "БЖБ 3"])
 
-    # --- АВТОМАТТЫ ТҮРДЕ ТАҚЫРЫП, ДЕСКРИПТОР ЖӘНЕ МАҚСАТТАРДЫ ШЫҚТЫРУ ---
     default_task = f"{selected_grade}, {selected_term}. {selected_subject} пәні бойынша {prefix_text} тапсырмасы."
     default_desc = "1. Тапсырма шартын түсініп орындайды (10 балл);\n2. Жауабын жүйелі түрде негіздеп жазады (10 балл)."
     default_achieved_goals = f"Оқушы {selected_subject} пәні бойынша {selected_term} бағдарламасындағы негізгі ұғымдарды түсініп, тапсырмаларды орындау дағдыларын меңгергенін көрсетеді."
@@ -307,10 +306,10 @@ elif menu == "Жұмысты тексеру":
                 Осы деректер негізінде Қазақстан мектептеріндегі критериалды бағалау жүйесіне қатаң сәйкес келетін:
                 1. Нақты тапсырма шартын немесе нұсқауын.
                 2. {int(max_score)} балдық жүйеге дәл бөлінген бағалау дескрипторларын.
-                3. Осы жұмыс арқылы "Қол жеткізілген мақсаттар" (оқушылар жақсы меңгерген дағдылар).
-                4. "Қиындық тудырған мақсаттар" (қосымша пысықтауды қажет ететін тұстар).
+                3. Осы жұмыс арқылы "Қол жеткізілген мақсаттар".
+                4. "Қиындық тудырған мақсаттар".
                 
-                Жауапты нақты мына форматта бөлек бөліп бер:
+                Жауапты мына форматта бер:
                 [ШАРТ] ... [/ШАРТ]
                 [ДЕСКРИПТОР] ... [/ДЕСКРИПТОР]
                 [МАҚСАТТАР_ҚОЛ_ЖЕТКІЗІЛГЕН] ... [/МАҚСАТТАР_ҚОЛ_ЖЕТКІЗІЛГЕН]
@@ -328,7 +327,7 @@ elif menu == "Жұмысты тексеру":
                 t_match = re.search(r'\[ШАРТ\](.*?)\[/ШАРТ\]', res_text, re.DOTALL)
                 d_match = re.search(r'\[ДЕСКРИПТОР\](.*?)\[/ДЕСКРИПТОР\]', res_text, re.DOTALL)
                 a_match = re.search(r'\[МАҚСАТТАР_ҚОЛ_ЖЕТКІЗІЛГЕН\](.*?)\[/МАҚСАТТАР_ҚОЛ_ЖЕТКІЗІЛГЕН\]', res_text, re.DOTALL)
-                s_match = re.search(r'\[МАҚСАТТАР_ҚИЫНДЫҚ\](.*?)\[/МАҚСАТТАР_ҚИЫНДЫҚ\]', res_text, res_text and re.DOTALL)
+                s_match = re.search(r'\[МАҚСАТТАР_ҚИЫНДЫҚ\](.*?)\[/МАҚСАТТАР_ҚИЫНДЫҚ\]', res_text, re.DOTALL)
                 
                 if t_match:
                     task_topic = t_match.group(1).strip()
@@ -378,7 +377,9 @@ elif menu == "Жұмысты тексеру":
 
                     if st.button("🔍 ЖИ арқылы талдау", key=f"ai_btn_{idx}"):
                         current_balance = get_user_credits(current_user)
-                        if current_balance < 1.0:
+                        
+                        # Admin немесе Zoya үшін кредит тегін/шексіз тексеріледі
+                        if not is_admin and current_balance < 1.0:
                             st.error("❌ Балансыңызда кредит жеткіліксіз!")
                         else:
                             with st.spinner("ЖИ файлды талдап жатыр..."):
@@ -412,15 +413,14 @@ elif menu == "Жұмысты тексеру":
                                     )
                                     
                                     st.session_state[ai_res_key] = response.choices[0].message.content
-                                    deduct_credit(current_user, amount=1.0)
-                                    st.success("Талдау сәтті жасалды (-1 кредит)!")
+                                    if not is_admin:
+                                        deduct_credit(current_user, amount=1.0)
+                                    st.success("Талдау сәтті жасалды!")
                                     st.rerun()
                                 except Exception as e:
                                     st.error(f"Қате пайда болды: {e}")
 
                     prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=0.0, step=0.5, key=f"score_{idx}")
-                    
-                    # Кері байланыс өрісі ЖИ нәтижесін тікелей көрсету үшін толтырылады
                     explanation = st.text_area("Кері байланыс (🟢/🔴 белгілерімен)", value=st.session_state[ai_res_key], height=180, key=f"exp_{idx}")
                     
                     if st.button("💾 Тексеруге сақтау", key=f"save_btn_{idx}"):
