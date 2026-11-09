@@ -232,23 +232,40 @@ elif menu == "Жұмысты тексеру":
     if prefix_text == "БЖБ":
         bzhb_sub_num = st.selectbox("📌 БЖБ нөмірін таңдаңыз:", ["БЖБ 1", "БЖБ 2", "БЖБ 3"])
 
-    default_task = f"{selected_grade}. {selected_term}. {selected_subject} пәні бойынша {prefix_text} тапсырмасы."
-    default_desc = "1. Тапсырма шартын толық түсініп, талапқа сай орындайды (10 балл);\n2. Жауабын жүйелі түрде негіздеп, қатесіз жазады (10 балл)."
+    # --- БЖБ МЕН ТЖБ ТАҚЫРЫПТАРЫН ФАЙЛДАН АВТОМАТТЫ ТҮРДЕ ШЫҚТЫРУ ---
+    default_task = f"{selected_grade}, {selected_term}. {selected_subject} пәні бойынша {prefix_text} тапсырмасы."
+    default_desc = "1. Тапсырма шартын түсініп орындайды (10 балл);\n2. Жауабын жүйелі түрде негіздеп жазады (10 балл)."
 
     if not specs_df.empty:
-        filtered = specs_df[
-            (specs_df["grade"].astype(str).str.strip() == str(selected_grade).strip()) & 
-            (specs_df["subject"].astype(str).str.strip() == str(selected_subject).strip()) & 
-            (specs_df["term"].astype(str).str.strip() == str(selected_term).strip()) & 
-            (specs_df["type"].astype(str).str.strip() == str(prefix_text).strip())
+        temp_df = specs_df.copy()
+        temp_df["grade"] = temp_df["grade"].astype(str).str.strip().str.lower()
+        temp_df["subject"] = temp_df["subject"].astype(str).str.strip().str.lower()
+        temp_df["term"] = temp_df["term"].astype(str).str.strip().str.lower()
+        temp_df["type"] = temp_df["type"].astype(str).str.strip().str.lower()
+        
+        s_grade = str(selected_grade).strip().lower()
+        s_subject = str(selected_subject).strip().lower()
+        s_term = str(selected_term).strip().lower()
+        s_type = str(prefix_text).strip().lower()
+
+        filtered = temp_df[
+            (temp_df["grade"] == s_grade) & 
+            (temp_df["subject"] == s_subject) & 
+            (temp_df["term"] == s_term) & 
+            (temp_df["type"] == s_type)
         ]
-        if prefix_text == "БЖБ" and bzhb_sub_num:
-            filtered = filtered[filtered["num"].astype(str).str.strip() == str(bzhb_sub_num).strip()]
-            
+        
+        if prefix_text == "БЖБ" and bzhb_sub_num and "num" in temp_df.columns:
+            temp_df["num"] = temp_df["num"].astype(str).str.strip().str.lower()
+            s_num = str(bzhb_sub_num).strip().lower()
+            sub_filtered = filtered[filtered["num"] == s_num]
+            if not sub_filtered.empty:
+                filtered = sub_filtered
+
         if not filtered.empty:
             row = filtered.iloc[0]
-            default_task = str(row["task"])
-            default_desc = str(row["desc"])
+            default_task = str(row["task"]) if "task" in row and pd.notna(row["task"]) else default_task
+            default_desc = str(row["desc"]) if "desc" in row and pd.notna(row["desc"]) else default_desc
 
     st.markdown("---")
     st.subheader("⚙️ Тапсырма мен дескриптор параметрлері")
@@ -270,27 +287,31 @@ elif menu == "Жұмысты тексеру":
     task_topic = st.text_input("Тапсырма тақырыбы немесе сұрақ", value=default_task)
 
     if auto_gen_clicked:
-        with st.spinner("Жасанды интеллект дескрипторларды дайындауда..."):
+        with st.spinner("Жасанды интеллект мектеп стандартына сай дескрипторларды дайындауда..."):
             try:
                 prompt = f"""
-                Сен тәжірибелі қазақстандық мұғалім әрі әдіскерсің. 
-                Пән және сынып: {selected_grade}, {selected_subject}
-                Тақырып: {task_topic}
-                Жалпы ең жоғарғы ұпай: {int(max_score)} балл.
+                Сен Қазақстан Республикасының орта білім беру мазмұны, БЖБ және ТЖБ өткізу ережелерін жеткізетін тәжірибелі мектеп мұғалімі әрі әдіскерсің.
                 
-                Осы деректер негізінде оқушылардың жұмысын тексеруге арналған:
-                1. Қысқаша тапсырма шартын (мұғалімге арналған нұсқау).
-                2. {int(max_score)} балдық жүйеге бөлінген нақты бағалау дескрипторларын (критерийлер мен балдарын көрсетіп) 
-                қазақ тілінде құрастырып бер. Жауапты нақты, түсінікті форматта жаз.
+                Мектеп стандартының деректері:
+                - Сынып және пән: {selected_grade}, {selected_subject}
+                - Бағалау түрі: {assessment_type} ({selected_term})
+                - Тапсырма тақырыбы/мазмұны: {task_topic}
+                - Жалпы ең жоғарғы ұпай: {int(max_score)} балл.
+                
+                Осы деректер негізінде Қазақстан мектептеріндегі критериалды бағалау жүйесіне қатаң сәйкес келетін:
+                1. Оқу бағдарламасына (Типтік оқу жоспарына) сай нақты тапсырма шартын немесе нұсқауын.
+                2. {int(max_score)} балдық жүйеге дәл бөлінген, әрбір критерий мен балдары нақты көрсетілген мектептік бағалау дескрипторларын құрастырып бер.
+                
+                Ескерту: Жауап тек қазақ тілінде, мектеп мұғалімдері қолданатын ресми әдістемелік стильде, артық сөзсіз нақты форматта жазылсын.
                 """
                 
                 response = client.chat.completions.create(
                     model="gpt-4o",
                     messages=[{"role": "user", "content": prompt}],
-                    temperature=0.3
+                    temperature=0.2
                 )
                 st.session_state['generated_descriptors'] = response.choices[0].message.content
-                st.success("✅ Дескрипторлар сәтті генерацияланды!")
+                st.success("✅ Мектеп стандартына сай дескрипторлар генерацияланды!")
             except Exception as e:
                 st.error(f"Генерация қатесі: {e}")
 
