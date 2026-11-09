@@ -146,4 +146,191 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 current_user = st.session_state.get("username", "teacher")
 user_balance = get_user_credits(current_user)
 price_per_credit = 100  
-total_tenge = user_balance * price_
+total_tenge = user_balance * price_per_credit  # Толық түзетілген жол
+
+user_role = get_user_role(current_user)
+is_admin = (user_role == "admin" or current_user.lower() == "zoya")
+
+st.sidebar.title("SmartTest")
+st.sidebar.markdown(f"👤 **Қолданушы:** {current_user}")
+st.sidebar.metric(label="💳 Сіздің балансыңыз", value=f"{user_balance} кредит", delta=f"{total_tenge:,.0f} ₸")
+st.sidebar.markdown("---")
+
+if is_admin:
+    menu_options = ["Басты бет", "Жұмысты тексеру", "Мұғалім бекітуі", "Нәтижелер", "Статистика", "Балансты толтыру", "Қауіпсіздік"]
+else:
+    menu_options = ["Басты бет", "Жұмысты тексеру", "Мұғалім бекітуі", "Нәтижелер", "Статистика", "Балансты толтыру"]
+
+menu = st.sidebar.selectbox("Бөлім", menu_options)
+
+if st.sidebar.button("🚪 Жүйеден шығу"):
+    st.session_state.authenticated = False
+    st.session_state.username = ""
+    st.rerun()
+
+st.title("📄 SmartTest — БЖБ / ТЖБ (Тоқсандар бойынша автоматты жүйе)")
+
+if menu == "Басты бет":
+    st.write("Оқушы жұмыстарын тексеруге және мұғалімнің қорытынды бағасын бекітуге арналған қауіпсіз платформа.")
+    if not specs_df.empty:
+        st.success(f"✅ Спецификация файлы сәтті жүктелді! Барлығы **{len(specs_df)}** жазба танылды.")
+    else:
+        st.warning("⚠️ Спецификация файлы табылмады немесе форматы қате.")
+        
+    c1, c2 = st.columns(2)
+    c1.metric("Мұғалім тексеруін күтуде", len(get_pending_results()))
+    c2.metric("Бекітілген жұмыс", len(get_approved_results()))
+
+elif menu == "Жұмысты тексеру":
+    st.subheader("Жұмыстарды тіркеу және ЖИ арқылы кері байланыспен бағалау")
+    
+    col_t1, col_t2 = st.columns(2)
+    with col_t1:
+        assessment_type = st.radio("📌 Бағалау түрі:", ["БЖБ (Бөлім бойынша)", "ТЖБ (Тоқсандық)"], horizontal=True)
+    with col_t2:
+        selected_term = st.selectbox("📌 Оқу тоқсаны:", ["1-тоқсан", "2-тоқсан", "3-тоқсан", "4-тоқсан"])
+
+    default_grades = ["5-сынып", "6-сынып", "7-сынып", "8-сынып", "9-сынып", "10-сынып", "11-сынып"]
+    default_subjects = [
+        "Қазақ тілі", "Қазақ әдебиеті", "Алгебра", "Геометрия", "Физика", "Химия", 
+        "Биология", "География", "Жаратылыстану", "Цифрлық сауаттылық және жасанды интеллект", 
+        "Информатика және жасанды интеллект", "Қазақстан тарихы", "Дүние жүзі тарихы"
+    ]
+
+    assigned_subject = get_user_subject(current_user)
+
+    if not is_admin and assigned_subject:
+        st.info(f"🔒 Сізге бекітілген пән: **{assigned_subject}**")
+        all_subjects = [assigned_subject]
+    else:
+        if not specs_df.empty:
+            csv_grades = specs_df["grade"].dropna().astype(str).unique().tolist()
+            csv_subjects = specs_df["subject"].dropna().astype(str).unique().tolist()
+            all_grades = sorted(list(set(default_grades + csv_grades)))
+            all_subjects = sorted(list(set(default_subjects + csv_subjects)))
+        else:
+            all_grades = default_grades
+            all_subjects = default_subjects
+
+    if not specs_df.empty:
+        csv_grades = specs_df["grade"].dropna().astype(str).unique().tolist()
+        all_grades = sorted(list(set(default_grades + csv_grades)))
+    else:
+        all_grades = default_grades
+
+    col_s1, col_s2 = st.columns(2)
+    with col_s1:
+        selected_grade = st.selectbox("📌 Сыныпты таңдаңыз", all_grades)
+    with col_s2:
+        if not is_admin and assigned_subject:
+            selected_subject = st.selectbox("📌 Пәнді таңдаңыз", all_subjects, disabled=True)
+        else:
+            selected_subject = st.selectbox("📌 Пәнді таңдаңыз", all_subjects)
+
+    prefix_text = "БЖБ" if "БЖБ" in assessment_type else "ТЖБ"
+    bzhb_sub_num = ""
+    if prefix_text == "БЖБ":
+        bzhb_sub_num = st.selectbox("📌 БЖБ нөмірін таңдаңыз:", ["БЖБ 1", "БЖБ 2", "БЖБ 3"])
+
+    # --- БЖБ МЕН ТЖБ ТАҚЫРЫПТАРЫН ФАЙЛДАН АВТОМАТТЫ ТҮРДЕ ШЫҚТЫРУ ---
+    default_task = f"{selected_grade}, {selected_term}. {selected_subject} пәні бойынша {prefix_text} тапсырмасы."
+    default_desc = "1. Тапсырма шартын түсініп орындайды (10 балл);\n2. Жауабын жүйелі түрде негіздеп жазады (10 балл)."
+
+    if not specs_df.empty:
+        temp_df = specs_df.copy()
+        temp_df["grade"] = temp_df["grade"].astype(str).str.strip().str.lower()
+        temp_df["subject"] = temp_df["subject"].astype(str).str.strip().str.lower()
+        temp_df["term"] = temp_df["term"].astype(str).str.strip().str.lower()
+        temp_df["type"] = temp_df["type"].astype(str).str.strip().str.lower()
+        
+        s_grade = str(selected_grade).strip().lower()
+        s_subject = str(selected_subject).strip().lower()
+        s_term = str(selected_term).strip().lower()
+        s_type = str(prefix_text).strip().lower()
+
+        filtered = temp_df[
+            (temp_df["grade"] == s_grade) & 
+            (temp_df["subject"] == s_subject) & 
+            (temp_df["term"] == s_term) & 
+            (temp_df["type"] == s_type)
+        ]
+        
+        if prefix_text == "БЖБ" and bzhb_sub_num and "num" in temp_df.columns:
+            temp_df["num"] = temp_df["num"].astype(str).str.strip().str.lower()
+            s_num = str(bzhb_sub_num).strip().lower()
+            sub_filtered = filtered[filtered["num"] == s_num]
+            if not sub_filtered.empty:
+                filtered = sub_filtered
+
+        if not filtered.empty:
+            row = filtered.iloc[0]
+            default_task = str(row["task"]) if "task" in row and pd.notna(row["task"]) else default_task
+            default_desc = str(row["desc"]) if "desc" in row and pd.notna(row["desc"]) else default_desc
+
+    st.markdown("---")
+    st.subheader("⚙️ Тапсырма мен дескриптор параметрлері")
+    
+    col_score, col_gen_btn = st.columns([1, 2])
+    with col_score:
+        max_score = st.number_input(
+            "Ең жоғары ұпай", 
+            min_value=1.0, 
+            max_value=20.0, 
+            value=20.0, 
+            step=1.0
+        )
+    with col_gen_btn:
+        st.write("")
+        st.write("")
+        auto_gen_clicked = st.button("✨ Дескриптор мен шартты автоматты генерациялау")
+
+    task_topic = st.text_input("Тапсырма тақырыбы немесе сұрақ", value=default_task)
+
+    if auto_gen_clicked:
+        with st.spinner("Жасанды интеллект мектеп стандартына сай дескрипторларды дайындауда..."):
+            try:
+                prompt = f"""
+                Сен Қазақстан Республикасының орта білім беру мазмұны, БЖБ және ТЖБ өткізу ережелерін жеткізетін тәжірибелі мектеп мұғалімі әрі әдіскерсің.
+                
+                Мектеп стандартының деректері:
+                - Сынып және пән: {selected_grade}, {selected_subject}
+                - Бағалау түрі: {assessment_type} ({selected_term})
+                - Тапсырма тақырыбы/мазмұны: {task_topic}
+                - Жалпы ең жоғарғы ұпай: {int(max_score)} балл.
+                
+                Осы деректер негізінде Қазақстан мектептеріндегі критериалды бағалау жүйесіне қатаң сәйкес келетін:
+                1. Оқу бағдарламасына (Типтік оқу жоспарына) сай нақты тапсырма шартын немесе нұсқауын.
+                2. {int(max_score)} балдық жүйеге дәл бөлінген, әрбір критерий мен балдары нақты көрсетілген мектептік бағалау дескрипторларын құрастырып бер.
+                
+                Ескерту: Жауап тек қазақ тілінде, мектеп мұғалімдері қолданатын ресми әдістемелік стильде, артық сөзсіз нақты форматта жазылсын.
+                """
+                
+                response = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.2
+                )
+                st.session_state['generated_descriptors'] = response.choices[0].message.content
+                st.success("✅ Мектеп стандартына сай дескрипторлар генерацияланды!")
+            except Exception as e:
+                st.error(f"Генерация қатесі: {e}")
+
+    default_desc_text = st.session_state.get('generated_descriptors', default_desc)
+    descriptors = st.text_area("Бағалау дескрипторлары", value=default_desc_text, height=150)
+    
+    uploaded_files = st.file_uploader("Оқушылардың жұмыс файлдарын жүктеу (JPG, PNG, PDF)", type=["jpg", "jpeg", "png", "pdf"], accept_multiple_files=True)
+    
+    if uploaded_files:
+        st.success(f"Барлығы {len(uploaded_files)} файл жүктелді.")
+        for idx, uploaded_file in enumerate(uploaded_files):
+            with st.expander(f"📁 Жұмыс №{idx+1}: {uploaded_file.name}"):
+                col_img, col_form = st.columns([1, 1])
+                with col_img:
+                    if uploaded_file.name.lower().endswith('.pdf'):
+                        st.info("📄 PDF форматындағы документ жүктелді.")
+                    else:
+                        try:
+                            image = Image.open(uploaded_file)
+                            st.image(image, caption=uploaded_file.name, use_container_width=True)
+                        except Exception:
+                            st.error("Суретті
