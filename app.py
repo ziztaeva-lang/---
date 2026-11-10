@@ -282,7 +282,6 @@ elif menu == "Жұмысты тексеру":
     
     col_score, col_gen_btn = st.columns([1, 2])
     with col_score:
-        # max_value 50.0-ге дейін ұлғайтылды
         max_score = st.number_input(
             "Ең жоғары ұпай", 
             min_value=1.0, 
@@ -401,7 +400,8 @@ elif menu == "Жұмысты тексеру":
                     if ai_res_key not in st.session_state:
                         st.session_state[ai_res_key] = "Бағаны мұғалім тексеруі қажет."
 
-                    if st.button("🔍 ТЕКСЕРУ", key=f"ai_btn_{idx}"):
+                    # Батырма атауы Тексеру (немесе Тереңірек талдау) болып біріктірілді
+                    if st.button("🔍 Тексеру", key=f"ai_btn_{idx}"):
                         current_balance = get_user_credits(current_user)
                         
                         if not is_admin and current_balance < 1.0:
@@ -428,7 +428,7 @@ elif menu == "Жұмысты тексеру":
 3. Әр тапсырманың астына оқушы жауабын тексеріп:
    - Дұрыс болса: 🟢 [Дұрыс] (неліктен дұрыс екенін қысқаша түсіндір)
    - Қате болса: 🔴 [Қате] (қай жерде қате кеткенін және дұрыс есептелуін түсіндір)
-4. Соңында осы жұмыс бойынша жиынтық баллды көрсет.
+4. Соңында осы жұмыс бойынша жиынтық баллды көрсет (Мысалы: Жалпы балл: 12/{int(max_score)}).
 """
                                     messages_content = [{"type": "text", "text": prompt_text}]
                                     for img_b64 in images_b64:
@@ -459,7 +459,7 @@ elif menu == "Жұмысты тексеру":
                                     st.session_state[ai_res_key] = full_ai_resp
                                     if not is_admin:
                                         deduct_credit(current_user, amount=1.0)
-                                    st.success("✅ Тереңірек талдау сәтті аяқталды!")
+                                    st.success("✅ Тексеру сәтті аяқталды!")
                                     st.rerun()
                                 except Exception as e:
                                     st.error(f"Қате пайда болды: {e}")
