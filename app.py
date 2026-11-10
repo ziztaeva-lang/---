@@ -282,10 +282,11 @@ elif menu == "Жұмысты тексеру":
     
     col_score, col_gen_btn = st.columns([1, 2])
     with col_score:
+        # max_value 50.0-ге дейін ұлғайтылды
         max_score = st.number_input(
             "Ең жоғары ұпай", 
             min_value=1.0, 
-            max_value=20.0, 
+            max_value=50.0, 
             value=20.0, 
             step=1.0
         )
