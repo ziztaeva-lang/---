@@ -333,10 +333,10 @@ elif menu == "Жұмысты тексеру":
                 res_text = response.choices[0].message.content
                 
                 import re
-                t_match = re.search(r'[ШАРТ](.*?)\[/ШАРТ\]', res_text, re.DOTALL)
+                t_match = re.search(r'\[ШАРТ\](.*?)\[/ШАРТ\]', res_text, re.DOTALL)
                 om_match = re.search(r'\[ОҚУ_МАҚСАТТАРЫ\](.*?)\[/ОҚУ_МАҚСАТТАРЫ\]', res_text, re.DOTALL)
                 bk_match = re.search(r'\[БАҒАЛАУ_КРИТЕРИЙІ\](.*?)\[/БАҒАЛАУ_КРИТЕРИЙІ\]', res_text, re.DOTALL)
-                d_match = re.search(r'[ДЕСКРИПТОР](.*?)\[/ДЕСКРИПТОР\]', res_text, re.DOTALL)
+                d_match = re.search(r'\[ДЕСКРИПТОР\](.*?)\[/ДЕСКРИПТОР\]', res_text, re.DOTALL)
                 a_match = re.search(r'\[МАҚСАТТАР_ҚОЛ_ЖЕТКІЗІЛГЕН\](.*?)\[/МАҚСАТТАР_ҚОЛ_ЖЕТКІЗІЛГЕН\]', res_text, re.DOTALL)
                 s_match = re.search(r'\[МАҚСАТТАР_ҚИЫНДЫҚ\](.*?)\[/МАҚСАТТАР_ҚИЫНДЫҚ\]', res_text, re.DOTALL)
                 
@@ -367,4 +367,216 @@ elif menu == "Жұмысты тексеру":
     default_desc_text = st.session_state.get('generated_descriptors', default_desc)
     descriptors = st.text_area("Бағалау дескрипторлары", value=default_desc_text, height=120)
     
-    default_achieved_text = st.session_state.get('generated_achieved
+    default_achieved_text = st.session_state.get('generated_achieved', default_achieved_goals)
+    achieved_goals = st.text_area("🎯 Қол жеткізілген мақсаттар", value=default_achieved_text, height=90)
+
+    default_struggling_text = st.session_state.get('generated_struggling', default_struggling_goals)
+    struggling_goals = st.text_area("⚠️ Қиындық тудырған мақсаттар", value=default_struggling_text, height=90)
+
+    uploaded_files = st.file_uploader("Оқушылардың жұмыс файлдарын жүктеу (JPG, PNG, PDF)", type=["jpg", "jpeg", "png", "pdf"], accept_multiple_files=True)
+    
+    if uploaded_files:
+        st.success(f"Барлығы {len(uploaded_files)} файл жүктелді.")
+        for idx, uploaded_file in enumerate(uploaded_files):
+            with st.expander(f"📁 Жұмыс №{idx+1}: {uploaded_file.name}"):
+                col_img, col_form = st.columns([1, 1])
+                with col_img:
+                    if uploaded_file.name.lower().endswith('.pdf'):
+                        st.info("📄 PDF форматындағы документ жүктелді.")
+                    else:
+                        try:
+                            image = Image.open(uploaded_file)
+                            st.image(image, caption=uploaded_file.name, use_container_width=True)
+                        except Exception:
+                            st.error("Суретті ашу мүмкін болмады.")
+                with col_form:
+                    student_name_key = f"student_name_{idx}"
+                    if student_name_key not in st.session_state:
+                        st.session_state[student_name_key] = f"{selected_grade}-0{idx+1}"
+
+                    st_code = st.text_input("Оқушы аты-жөні", value=st.session_state[student_name_key], key=f"name_input_{idx}")
+                    
+                    ai_res_key = f"ai_result_{idx}"
+                    if ai_res_key not in st.session_state:
+                        st.session_state[ai_res_key] = "Бағаны мұғалім тексеруі қажет."
+
+                    if st.button("🔍 Тексеру", key=f"ai_btn_{idx}"):
+                        current_balance = get_user_credits(current_user)
+                        
+                        if not is_admin and current_balance < 1.0:
+                            st.error("❌ Балансыңызда кредит жеткіліксіз!")
+                        else:
+                            with st.spinner("ЖИ суреттен оқушының аты-жөнін оқып, әрбір тапсырманы талдап жатыр..."):
+                                try:
+                                    images_b64 = process_uploaded_file(uploaded_file)
+                                    
+                                    prompt_text = f"""
+Сен Қазақстан мектептерінің тәжірибелі мұғалімі әрі сарапшысың. 
+Оқушының мына жұмысын берілген оқу мақсаттары, бағалау критерийлері, дескрипторлар мен ең жоғарғы баллға ({int(max_score)}) сәйкес мұқият тексер.
+
+ҚАТАҢ БАҒАЛАУ ШАРТЫ ЖӘНЕ ТҮС ЖҮЙЕСІ:
+1. Жалпы максималды балл ДӘЛ {int(max_score)} БАЛЛ. Басқа шкала қолдануға БОЛМАЙДЫ.
+2. Әр тапсырма мен тармақты тексерген кезде мына белгілеу жүйесін қатаң қолдан:
+   - 🟢 [Дұрыс] — Жауап толық дұрыс.
+   - 🔴 [Қате] — Жауап қате немесе дескриптор орындалмаған.
+   - 🟡 [Жартылай] — Жартылай дұрыс немесе мұғалімнің қосымша тексеруін/назар аударуын талап етеді.
+3. Қорытынды баллды тек 'Жиынтық балл: X/{int(max_score)}' форматында көрсет.
+
+Тапсырма тақырыбы: {task_topic}
+Оқу мақсаттары: {learning_objectives}
+Бағалау критерийі: {assessment_criteria}
+Дескрипторлар: {descriptors}
+Қол жеткізілген мақсаттар: {achieved_goals}
+Қиындық тудырған мақсаттар: {struggling_goals}
+
+НАҚТЫ ТАЛАПТАР:
+1. ФАЙЛДЫҢ ҮСТІҢГІ ТҰСЫНДА ЖАЗЫЛҒАН ОҚУШЫНЫҢ АТЫ-ЖӨНІН ТАБЫП, МЫНА ФОРМАТТА ЖАЗ:
+   [ОҚУШЫ_АТЫ] Тегі Есімі [/ОҚУШЫ_АТЫ] (егер табылмаса "Белгісіз оқушы" деп көрсет).
+2. Жұмыстағы әрбір тапсырманы және оның тармақтарын (1-тапсырма, 2-тапсырма, а, б, в, г т.б.) бөлек-бөлек қарастыр.
+3. Соңында осы жұмыс бойынша жиынтық баллды 'Жиынтық балл: X/{int(max_score)}' түрінде көрсет.
+"""
+                                    messages_content = [{"type": "text", "text": prompt_text}]
+                                    for img_b64 in images_b64:
+                                        messages_content.append({
+                                            "type": "image_url",
+                                            "image_url": {"url": f"data:image/png;base64,{img_b64}"}
+                                        })
+
+                                    response = client.chat.completions.create(
+                                        model="gpt-4o",
+                                        messages=[
+                                            {"role": "system", "content": f"Сіз оқушы жұмыстарын 🟢 [Дұрыс], 🔴 [Қате], 🟡 [Жартылай] белгілерімен тексеретін, барлық баллды қатаң түрде {int(max_score)} баллдық шкалаға сай есептейтін мұғалімсіз."},
+                                            {"role": "user", "content": messages_content}
+                                        ],
+                                        max_tokens=1200
+                                    )
+                                    
+                                    full_ai_resp = response.choices[0].message.content
+                                    
+                                    import re
+                                    name_match = re.search(r'\[ОҚУШЫ_АТЫ\](.*?)\[/ОҚУШЫ_АТЫ\]', full_ai_resp, re.DOTALL)
+                                    if name_match:
+                                        found_name = name_match.group(1).strip()
+                                        if found_name and "Белгісіз" not in found_name:
+                                            st.session_state[student_name_key] = found_name
+                                        full_ai_resp = re.sub(r'\[ОҚУШЫ_АТЫ\].*?\[/ОҚУШЫ_АТЫ\]', '', full_ai_resp).strip()
+                                    
+                                    st.session_state[ai_res_key] = full_ai_resp
+                                    if not is_admin:
+                                        deduct_credit(current_user, amount=1.0)
+                                    st.success("✅ Тексеру сәтті аяқталды!")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Қате пайда болды: {e}")
+
+                    prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=0.0, step=0.5, key=f"score_{idx}")
+                    explanation = st.text_area("Кері байланыс (🟢/🔴/🟡 белгілерімен)", value=st.session_state[ai_res_key], height=200, key=f"exp_{idx}")
+                    
+                    if st.button("💾 Тексеруге сақтау", key=f"save_btn_{idx}"):
+                        current_st_name = st_code.strip() if st_code.strip() else st.session_state[student_name_key]
+                        if current_st_name:
+                            full_feedback = f"Кері байланыс пен белгілер:\n{explanation.strip()}\n\n📚 Оқу мақсаттары:\n{learning_objectives.strip()}\n\n📋 Бағалау критерийі:\n{assessment_criteria.strip()}\n\n🎯 Қол жеткізілген мақсаттар:\n{achieved_goals.strip()}\n\n⚠️ Қиындық тудырған мақсаттар:\n{struggling_goals.strip()}"
+                            save_pending_result(
+                                current_st_name, 
+                                f"[{selected_term} | {prefix_text} | {selected_grade} - {selected_subject}] {task_topic.strip()}", 
+                                descriptors.strip(), 
+                                float(prop_score), 
+                                float(max_score), 
+                                full_feedback
+                            )
+                            st.success("✅ Тексеруге сәтті сақталды!")
+                        else:
+                            st.error("❌ Оқушы аты-жөнін енгізіңіз!")
+
+elif menu == "Мұғалім бекітуі":
+    st.subheader("Мұғалімнің қорытынды бағасын бекіту")
+    pending = get_pending_results()
+    if not pending:
+        st.info("Бекітуді күтіп тұрған жұмыс жоқ.")
+    for item in pending:
+        with st.expander(f"Жұмыс: {item['student_code']} — {item['proposed_score']} балл"):
+            score = st.number_input("Бекітілетін ұпай", value=float(item['proposed_score']), key="app_" + item["id"])
+            comment = st.text_area("Ескертпе", key="com_" + item["id"])
+            if st.button("Бекіту", key="btn_" + item["id"]):
+                approve_result(item["id"], score, current_user, comment)
+                st.rerun()
+
+elif menu == "Нәтижелер":
+    st.subheader("Мұғалім бекіткен нәтижелер")
+    rows = get_approved_results()
+    if not rows:
+        st.info("Әзірге нәтиже жоқ.")
+    else:
+        df_res = pd.DataFrame(rows)
+        st.dataframe(df_res)
+
+elif menu == "Статистика":
+    st.subheader("Статистика")
+    rows = get_approved_results()
+    if not rows:
+        st.info("Әзірге статистика жоқ.")
+    else:
+        df_stat = pd.DataFrame(rows)
+        st.bar_chart(df_stat.set_index('student_code')[['teacher_score']])
+
+elif menu == "Балансты толтыру":
+    st.subheader("💳 Кредит сатып алу және балансты толтыру")
+    st.write("1 кредит = 100 ₸. Қалаған кредит санын енгізіп, төлем жасаңыз.")
+    
+    credits_to_buy = st.number_input("Сатып алғыңыз келетін кредит саны:", min_value=1, max_value=1000, value=10, step=1)
+    amount = credits_to_buy * 100
+    
+    st.markdown(f"**Төленетін жалпы сома:** <span style='color: #10b981; font-size: 20px; font-weight: bold;'>{amount:,.0f} ₸</span>", unsafe_allow_html=True)
+    
+    st.markdown("---")
+    st.info("📱 **Төлем жасау қадамдары:**\n1. Төмендегі QR кодтардың бірін (Kaspi немесе Halyk) сканерлеңіз;\n2. Көрсетілген соманы аударыңыз;\n3. Төлем чегіндегі транзакция / чек нөмірін төмендегі өріске енгізіп, растауға жіберіңіз.")
+    
+    qr_col1, qr_col2 = st.columns(2)
+    
+    with qr_col1:
+        st.write("### 🟡 Kaspi QR арқылы төлеу")
+        if os.path.exists("kaspi_qr_ИЗС.png"):
+            st.image("kaspi_qr_ИЗС.png", caption="SmartTest — Kaspi Pay QR", width=260)
+        else:
+            st.warning("⚠️ `kaspi_qr_ИЗС.png` файлы табылмады.")
+            
+    with qr_col2:
+        st.write("### 🟢 Halyk QR арқылы төлеу")
+        if os.path.exists("halyk_qr_ЫРЫС.png"):
+            st.image("halyk_qr_ЫРЫС.png", caption="SmartTest — Halyk QR", width=260)
+        else:
+            st.warning("⚠️ `halyk_qr_ЫРЫС.png` суретін жоба папкасына салыңыз.")
+    
+    with st.form("payment_verification_form"):
+        st.write("### Төлемді растау үшін деректерді енгізіңіз:")
+        txn_id = st.text_input("Kaspi немесе Halyk транзакция/чек нөмірі", placeholder="Чектегі транзакция немесе операция нөмірін жазыңыз...")
+        
+        submit_payment = st.form_submit_button("📤 Төлем туралы хабарлау")
+        
+        if submit_payment:
+            if not txn_id.strip():
+                st.error("❌ Дұрыс транзакция нөмірін енгізіңіз!")
+            else:
+                try:
+                    add_payment_record(current_user, amount, float(credits_to_buy), txn_id.strip())
+                    st.success(f"✅ Төлем туралы өтінім қабылданды! Транзакция коды: {txn_id}. Әкімші (Zoya) тексергеннен кейін балансыңызға {credits_to_buy} кредит қосылады.")
+                except Exception as e:
+                    st.error(f"Қате орын алды: {e}")
+
+elif menu == "Қауіпсіздік":
+    if not is_admin:
+        st.error("⛔ Бұл бетке тек әкімші (admin) ғана кіре алады!")
+        st.stop()
+
+    st.subheader("Қауіпсіздік және файл күйі (Диагностика)")
+    st.write(f"Ағымдағы пайдаланушы: **{current_user}** | Баланс: **{user_balance} кредит** ({total_tenge:,.0f} ₸)")
+    st.markdown("---")
+    
+    if not specs_df.empty:
+        st.success(f"✅ Спецификация файлы сәтті оқылды! Жалпы жолдар саны: **{len(specs_df)}**")
+        st.write("**Файлдағы табылған бағандар:**", list(specs_df.columns))
+        st.dataframe(specs_df.head(5))
+    else:
+        st.error("❌ Спецификация файлы табылмады немесе баған атаулары қате.")
+        for log in load_logs:
+            st.warning(log)
