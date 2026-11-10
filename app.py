@@ -400,7 +400,7 @@ elif menu == "Жұмысты тексеру":
                     if ai_res_key not in st.session_state:
                         st.session_state[ai_res_key] = "Бағаны мұғалім тексеруі қажет."
 
-                    # Тексеру батырмасы мен callback логикасы
+                    # Тексеру батырмасы (st.rerun() алып тасталды, нәтиже тікелей session_state арқылы сақталады)
                     if st.button("🟢 Тексеру", key=f"ai_btn_{idx}"):
                         current_balance = get_user_credits(current_user)
                         
@@ -466,11 +466,10 @@ elif menu == "Жұмысты тексеру":
                                     if not is_admin:
                                         deduct_credit(current_user, amount=1.0)
                                     st.success("✅ Тексеру сәтті аяқталды!")
-                                    st.rerun()
                                 except Exception as e:
                                     st.error(f"Қате пайда болды: {e}")
 
-                    # Нәтижені көрсету үшін session_state-тен алу
+                    # Нәтижені көрсету
                     current_ai_text = st.session_state.get(ai_res_key, "Бағаны мұғалім тексеруі қажет.")
                     prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=0.0, step=0.5, key=f"score_{idx}")
                     explanation = st.text_area("Кері байланыс (🟢/🔴/🟡 белгілерімен)", value=current_ai_text, height=200, key=f"exp_{idx}")
