@@ -400,7 +400,7 @@ elif menu == "Жұмысты тексеру":
                     if ai_res_key not in st.session_state:
                         st.session_state[ai_res_key] = "Бағаны мұғалім тексеруі қажет."
 
-                    if st.button("🔍 Тексеру", key=f"ai_btn_{idx}"):
+                    if st.button("🟢 Тексеру", key=f"ai_btn_{idx}"):
                         current_balance = get_user_credits(current_user)
                         
                         if not is_admin and current_balance < 1.0:
