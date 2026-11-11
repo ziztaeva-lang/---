@@ -11,7 +11,6 @@ from security_layer import (
     approve_result, get_approved_results, external_ai_is_enabled,
     get_user_credits, deduct_credit, verify_user, add_payment_record,
     get_user_role, get_user_subject
-
 )
 
 st.set_page_config(page_title="SmartTest БЖБ–ТЖБ", layout="wide")
@@ -100,8 +99,18 @@ def process_uploaded_file(uploaded_file):
             b64_str = base64.b64encode(img_bytes).decode('utf-8')
             images_b64.append(b64_str)
     else:
-        b64_str = base64.b64encode(file_bytes).decode('utf-8')
-        images_b64.append(b64_str)
+        # Кескінді ашып, PNG форматына келтіру (OpenAI сапалы қабылдауы үшін)
+        try:
+            img = Image.open(io.BytesIO(file_bytes))
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+            buffered = io.BytesIO()
+            img.save(buffered, format="JPEG", quality=90)
+            b64_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
+            images_b64.append(b64_str)
+        except Exception:
+            b64_str = base64.b64encode(file_bytes).decode('utf-8')
+            images_b64.append(b64_str)
         
     return images_b64
 
@@ -420,33 +429,32 @@ elif menu == "Жұмысты тексеру":
                     st_code = st.text_input("Оқушы аты-жөні", value=st.session_state[student_name_key], key=f"name_input_{idx}")
                     
                     ai_res_key = f"ai_result_{idx}"
-                    if ai_res_key not in st.session_state:
-                        st.session_state[ai_res_key] = "Бағаны мұғалім тексеруі қажет."
+                    if ai_res_key not in st.session_state or st.session_state[ai_res_key] == "Бағаны мұғалім тексеруі қажет.":
+                        st.session_state[ai_res_key] = ""
 
-                    # ЖИ ТЕКСЕРУ БАТЫРМАСЫ (Қатаң түрдегі тапсырмалар бойынша жеке талдау макеті)
+                    # ЖИ ТЕКСЕРУ БАТЫРМАСЫ
                     if st.button("🟢 Тексеру", key=f"ai_btn_{idx}"):
                         current_balance = get_user_credits(current_user)
                         
                         if not is_admin and current_balance < 1.0:
                             st.error("❌ Балансыңызда кредит жеткіліксіз!")
                         else:
-                            with st.spinner("ЖИ суреттегі әрбір тапсырманы және оның тармақтарын жеке-жеке оқып, талдап жатыр..."):
+                            with st.spinner("ЖИ суреттегі әрбір тапсырма мен тармақты (1-тапсырма, 2-тапсырма) оқып, толық тексеруде..."):
                                 try:
                                     images_b64 = process_uploaded_file(uploaded_file)
                                     
-                                    # Мүлде жаңа, мектеп мұғалімінің тексеру логикасына толық сәйкес келетін промпт
                                     prompt_text = f"""
 Сен — Қазақстан мектептерінің тәжірибелі пән мұғалімі әрі сарапшысысың. 
-Суреттегі оқушының қолжазба жұмысын мұқият оқып шық және оны төмендегі параметрлер мен дескрипторлар бойынша қатаң тексер.
+Суреттегі оқушының қолжазба жұмысын өте мұқият оқып шық. Жұмыста барлық тапсырмалар (1-тапсырма а, ә, б және 2-тапсырма а, б, в) бар. Соларды жеке-жеке тексер.
 
 МІНДЕТТІ ТҮРДЕ ОРЫНДАЛАТЫН ЕРЕЖЕЛЕР:
-1. Жұмыстағы ӘРБІР тапсырманы (Мысалы: 1-тапсырма, 2-тапсырма) және олардың барлық тармақтарын (а, б, в, г) ТІЗБЕКТЕП ЖЕКЕ-ЖЕКЕ жазып шық.
+1. Жұмыстағы ӘРБІР тапсырманы және олардың барлық тармақтарын ТІЗБЕКТЕП ЖЕКЕ-ЖЕКЕ жазып шық.
 2. Әрбір тармақтың тұсына міндетті түрде мына белгілердің бірін қой:
-   - 🟢 [Дұрыс] — егер жауап дұрыс болса.
-   - 🔴 [Қате] — егер жауап қате немесе орындалмаған болса.
-   - 🟡 [Жартылай] — егер жартылай дұрыс болса.
-3. Әр тармақтың бағалану себебін немесе оқушының қатесін қысқаша түсіндіріп жаз.
-4. Соңында барлық ұпайды қосып, міндетті түрде дәл мына жолды жаз:
+   - 🟢 [Дұрыс] — жауап дұрыс болса.
+   - 🔴 [Қате] — жауап қате немесе орындалмаған болса.
+   - 🟡 [Жартылай] — жартылай дұрыс болса.
+3. Әр тармақтың бағалану себебін немесе оқушының жауабын неліктен қате/дұрыс деп бағалағаныңды нақты түсіндіріп жаз.
+4. Соңында барлық ұпайды қосып, міндетті түрде дәл мына форматта жаз:
    Жиынтық балл: X/{int(max_score)}
 
 БЕРІЛГЕН ПАРАМЕТРЛЕР:
@@ -458,25 +466,25 @@ elif menu == "Жұмысты тексеру":
 
 ФОРМАТ ТАЛАБЫ:
 1. Бірінші кезекте оқушының аты-жөнін тауып, мына форматта жаз:
-   [ОҚУШЫ_АТЫ] Тегі Аты [/ОҚУШЫ_АТЫ] (егер жоқ болса "Белгісіз оқушы").
+   [ОҚУШЫ_АТЫ] Аты Жөні [/ОҚУШЫ_АТЫ] (егер жоқ болса "Белгісіз оқушы").
 2. Әр тапсырма мен оның тармақтарын бөлек жолдармен анықтап жаз.
-3. Қорытындыда 'Жиынтық балл: X/{int(max_score)}' түрінде баллды көрсет.
+3. Соңында міндетті түрде 'Жиынтық балл: X/{int(max_score)}' түрінде көрсет.
 """
                                     messages_content = [{"type": "text", "text": prompt_text}]
                                     for img_b64 in images_b64:
                                         messages_content.append({
                                             "type": "image_url",
-                                            "image_url": {"url": f"data:image/png;base64,{img_b64}"}
+                                            "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}
                                         })
 
                                     response = client.chat.completions.create(
                                         model="gpt-4o",
                                         messages=[
-                                            {"role": "system", "content": f"Сіз оқушы жұмыстарындағы әрбір тапсырманы жеке-жеке талдап, 🟢 [Дұрыс], 🔴 [Қате], 🟡 [Жартылай] белгілерімен бағалайтын және барлық баллды қатаң түрде {int(max_score)} баллдық шкалаға сай есептейтін тәжірибелі әрі әділ мұғалімсіз."},
+                                            {"role": "system", "content": f"Сіз оқушы жұмыстарындағы әрбір тапсырманы жеке-жеке талдап, 🟢 [Дұрыс], 🔴 [Қате], 🟡 [Жартылай] белгілерімен бағалайтын және барлық баллды қатаң түрде {int(max_score)} баллдық шкалаға сай есептейтін тәжірибелі мұғалімсіз."},
                                             {"role": "user", "content": messages_content}
                                         ],
-                                        max_tokens=2000,
-                                        temperature=0.0
+                                        max_tokens=2500,
+                                        temperature=0.1
                                     )
                                     
                                     full_ai_resp = response.choices[0].message.content
@@ -505,21 +513,25 @@ elif menu == "Жұмысты тексеру":
                                 except Exception as e:
                                     st.error(f"Қате пайда болды: {e}")
 
-                    current_ai_text = st.session_state.get(ai_res_key, "Бағаны мұғалім тексеруі қажет.")
+                    current_ai_text = st.session_state.get(ai_res_key, "")
                     
-                    if current_ai_text != "Бағаны мұғалім тексеруі қажет.":
+                    if current_ai_text:
                         st.markdown("### 🎨 Талдау мен сәйкестік картасы:")
                         lines = current_ai_text.split('\n')
                         for line in lines:
-                            if '🟢' in line or '[Дұрыс]' in line:
+                            if any(k in line for k in ['🟢', '[Дұрыс]', 'дұрыс']):
                                 st.markdown(f"<div class='correct-card'>{line}</div>", unsafe_allow_html=True)
-                            elif '🔴' in line or '[Қате]' in line:
+                            elif any(k in line for k in ['🔴', '[Қате]', 'қате', 'орындалмаған']):
                                 st.markdown(f"<div class='incorrect-card'>{line}</div>", unsafe_allow_html=True)
-                            elif '🟡' in line or '[Жартылай]' in line:
+                            elif any(k in line for k in ['🟡', '[Жартылай]', 'жартылай']):
                                 st.markdown(f"<div class='warning-card'>{line}</div>", unsafe_allow_html=True)
+                            elif line.strip():
+                                st.write(line)
+                    else:
+                        st.info("ℹ️ Жұмысты тексеру үшін жоғарыдағы **🟢 Тексеру** батырмасын басыңыз.")
 
                     prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=st.session_state.get(f"score_{idx}", 0.0), step=0.5, key=f"score_{idx}")
-                    explanation = st.text_area("Толық кері байланыс мәтіні", value=current_ai_text, height=220, key=f"exp_{idx}")
+                    explanation = st.text_area("Толық кері байланыс мәтіні", value=current_ai_text, height=250, key=f"exp_{idx}")
                     
                     if st.button("💾 Тексеруге сақтау", key=f"save_btn_{idx}"):
                         current_st_name = st_code.strip() if st_code.strip() else st.session_state[student_name_key]
