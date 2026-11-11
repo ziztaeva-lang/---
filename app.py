@@ -99,7 +99,6 @@ def process_uploaded_file(uploaded_file):
             b64_str = base64.b64encode(img_bytes).decode('utf-8')
             images_b64.append(b64_str)
     else:
-        # Кескінді ашып, PNG форматына келтіру (OpenAI сапалы қабылдауы үшін)
         try:
             img = Image.open(io.BytesIO(file_bytes))
             if img.mode in ("RGBA", "P"):
@@ -113,39 +112,6 @@ def process_uploaded_file(uploaded_file):
             images_b64.append(b64_str)
         
     return images_b64
-
-# --- СПЕЦИФИКАЦИЯ ФАЙЛЫН ОҚУ ---
-@st.cache_data
-def load_specs():
-    possible_files = [
-        "specs.xlsx", "specs.xls", "specs.csv", "specs",
-        "./specs.xlsx", "./specs.xls", "./specs.csv",
-        "data/specs.xlsx", "data/specs.csv"
-    ]
-    debug_messages = []
-    for file_path in possible_files:
-        if os.path.exists(file_path):
-            if file_path.endswith(('.xlsx', '.xls')) or not file_path.endswith('.csv'):
-                try:
-                    df = pd.read_excel(file_path)
-                    df.columns = df.columns.str.strip().str.lower()
-                    required_cols = ["grade", "subject", "term", "type", "num", "task", "desc"]
-                    if not [col for col in required_cols if col not in df.columns]:
-                        return df, "Сәтті оқылды (Excel)"
-                except Exception as e:
-                    debug_messages.append(f"Excel қатесі: {e}")
-            for enc in ["utf-8-sig", "utf-8", "cp1251", "latin1"]:
-                try:
-                    df = pd.read_csv(file_path, encoding=enc)
-                    df.columns = df.columns.str.strip().str.lower()
-                    required_cols = ["grade", "subject", "term", "type", "num", "task", "desc"]
-                    if not [col for col in required_cols if col not in df.columns]:
-                        return df, "Сәтті оқылды (CSV)"
-                except Exception:
-                    continue
-    return pd.DataFrame(), debug_messages
-
-specs_df, load_logs = load_specs()
 
 # --- АУТЕНТИФИКАЦИЯ ---
 if "authenticated" not in st.session_state:
@@ -204,206 +170,24 @@ if st.sidebar.button("🚪 Жүйеден шығу"):
     st.session_state.username = ""
     st.rerun()
 
-st.title("📄 SmartTest — БЖБ / ТЖБ (Тоқсандар бойынша автоматты жүйе)")
+st.title("📄 SmartTest — Автоматты түрде тексеру жүйесі")
 
 if menu == "Басты бет":
-    st.write("Оқушы жұмыстарын тексеруге және мұғалімнің қорытынды бағасын бекітуге арналған қауіпсіз платформа.")
-    if not specs_df.empty:
-        st.success(f"✅ Спецификация файлы сәтті жүктелді! Барлығы **{len(specs_df)}** жазба танылды.")
-    else:
-        st.warning("⚠️ Спецификация файлы табылмады немесе форматы қате.")
-        
+    st.write("Оқушы жұмыстарын ҚР білім беру стандартына сай автоматты түрде тексеруге арналған платформа.")
     c1, c2 = st.columns(2)
     c1.metric("Мұғалім тексеруін күтуде", len(get_pending_results()))
     c2.metric("Бекітілген жұмыс", len(get_approved_results()))
 
 elif menu == "Жұмысты тексеру":
-    st.subheader("Жұмыстарды тіркеу және ЖИ арқылы кері байланыспен бағалау")
+    st.subheader("Оқушы жұмыстарын жүктеу және автоматты тексеру")
     
-    col_t1, col_t2 = st.columns(2)
-    with col_t1:
-        assessment_type = st.radio("📌 Бағалау түрі:", ["БЖБ (Бөлім бойынша)", "ТЖБ (Тоқсандық)"], horizontal=True)
-    with col_t2:
-        selected_term = st.selectbox("📌 Оқу тоқсаны:", ["1-тоқсан", "2-тоқсан", "3-тоқсан", "4-тоқсан"])
-
-    default_grades = ["5-сынып", "6-сынып", "7-сынып", "8-сынып", "9-сынып", "10-сынып", "11-сынып"]
-    default_subjects = [
-        "Қазақ тілі", "Қазақ әдебиеті", "Алгебра", "Геометрия", "Физика", "Химия", 
-        "Биология", "География", "Жаратылыстану", "Цифрлық сауаттылық және жасанды интеллект", 
-        "Информатика және жасанды интеллект", "Қазақстан тарихы", "Дүние жүзі тарихы"
-    ]
-
-    assigned_subject = get_user_subject(current_user)
-
-    if not is_admin and assigned_subject:
-        st.info(f"🔒 Сізге бекітілген пән: **{assigned_subject}**")
-        all_subjects = [assigned_subject]
-    else:
-        if not specs_df.empty:
-            csv_grades = specs_df["grade"].dropna().astype(str).unique().tolist()
-            csv_subjects = specs_df["subject"].dropna().astype(str).unique().tolist()
-            all_grades = sorted(list(set(default_grades + csv_grades)))
-            all_subjects = sorted(list(set(default_subjects + csv_subjects)))
-        else:
-            all_grades = default_grades
-            all_subjects = default_subjects
-
-    if not specs_df.empty:
-        csv_grades = specs_df["grade"].dropna().astype(str).unique().tolist()
-        all_grades = sorted(list(set(default_grades + csv_grades)))
-    else:
-        all_grades = default_grades
-
-    col_s1, col_s2 = st.columns(2)
-    with col_s1:
-        selected_grade = st.selectbox("📌 Сыныпты таңдаңыз", all_grades)
-    with col_s2:
-        if not is_admin and assigned_subject:
-            selected_subject = st.selectbox("📌 Пәнді таңдаңыз", all_subjects, disabled=True)
-        else:
-            selected_subject = st.selectbox("📌 Пәнді таңдаңыз", all_subjects)
-
-    prefix_text = "БЖБ" if "БЖБ" in assessment_type else "ТЖБ"
-    bzhb_sub_num = ""
-    if prefix_text == "БЖБ":
-        bzhb_sub_num = st.selectbox("📌 БЖБ нөмірін таңдаңыз:", ["БЖБ 1", "БЖБ 2", "БЖБ 3"])
-
-    default_task = f"{selected_grade}, {selected_term}. {selected_subject} пәні бойынша {prefix_text} тапсырмасы."
-    default_learning_objectives = "8.4.2.1 — алгоритмнің ауытқуы (bias) ұғымын түсіндіру және ЖИ оқыту үшін қате ақпараттың қолданылуы дискриминацияға алып келетіндігіне мысалдар келтіру."
-    default_assessment_criteria = "1. Алгоритмнің ауытқуын (bias) анықтайды және түсіндіреді;\n2. ЖИ оқытудағы қате ақпараттың зардаптарына мысал келтіреді."
-    default_desc = "1. Тапсырма шартын түсініп орындайды;\n2. Жауабын жүйелі түрде негіздеп жазады."
-    default_achieved_goals = f"Оқушы {selected_subject} пәні бойынша {selected_term} бағдарламасындағы оқу мақсаттарын толық меңгергенін көрсетеді."
-    default_struggling_goals = "Тұжырымдарды жазуда және мысалдар келтіруде нақтылықты сақтау."
-
-    if not specs_df.empty:
-        temp_df = specs_df.copy()
-        temp_df["grade"] = temp_df["grade"].astype(str).str.strip().str.lower()
-        temp_df["subject"] = temp_df["subject"].astype(str).str.strip().str.lower()
-        temp_df["term"] = temp_df["term"].astype(str).str.strip().str.lower()
-        temp_df["type"] = temp_df["type"].astype(str).str.strip().str.lower()
-        
-        s_grade = str(selected_grade).strip().lower()
-        s_subject = str(selected_subject).strip().lower()
-        s_term = str(selected_term).strip().lower()
-        s_type = str(prefix_text).strip().lower()
-
-        filtered = temp_df[
-            (temp_df["grade"] == s_grade) & 
-            (temp_df["subject"] == s_subject) & 
-            (temp_df["term"] == s_term) & 
-            (temp_df["type"] == s_type)
-        ]
-        
-        if prefix_text == "БЖБ" and bzhb_sub_num and "num" in temp_df.columns:
-            temp_df["num"] = temp_df["num"].astype(str).str.strip().str.lower()
-            s_num = str(bzhb_sub_num).strip().lower()
-            sub_filtered = filtered[filtered["num"] == s_num]
-            if not sub_filtered.empty:
-                filtered = sub_filtered
-
-        if not filtered.empty:
-            row = filtered.iloc[0]
-            default_task = str(row["task"]) if "task" in row and pd.notna(row["task"]) else default_task
-            default_desc = str(row["desc"]) if "desc" in row and pd.notna(row["desc"]) else default_desc
-            if "learning_objectives" in row and pd.notna(row["learning_objectives"]):
-                default_learning_objectives = str(row["learning_objectives"])
-            if "assessment_criteria" in row and pd.notna(row["assessment_criteria"]):
-                default_assessment_criteria = str(row["assessment_criteria"])
-            if "achieved_goals" in row and pd.notna(row["achieved_goals"]):
-                default_achieved_goals = str(row["achieved_goals"])
-            if "struggling_goals" in row and pd.notna(row["struggling_goals"]):
-                default_struggling_goals = str(row["struggling_goals"])
-
-    st.markdown("---")
-    st.subheader("⚙️ Тапсырма, оқу мақсаттары, критерийлер және дескрипторлар параметрлері")
-    
-    col_score, col_gen_btn = st.columns([1, 2])
-    with col_score:
-        max_score = st.number_input(
-            "Ең жоғары ұпай", 
-            min_value=1.0, 
-            max_value=50.0, 
-            value=7.0, 
-            step=1.0
-        )
-    with col_gen_btn:
-        st.write("")
-        st.write("")
-        auto_gen_clicked = st.button("✨ Барлық параметрлерді автоматты генерациялау")
-
-    task_topic = st.text_input("Тапсырма тақырыбы немесе сұрақ", value=default_task)
-
-    if auto_gen_clicked:
-        with st.spinner("Жасанды интеллект ҚР оқу стандартына сай ресми кодын көрсете отырып оқу мақсаттарын дайындауда..."):
-            try:
-                prompt = f"""
-                Сен Қазақстан Республикасының орта білім беру мазмұнының мемлекеттік стандарты мен үлгілік оқу жоспарларын жеткізетін тәжірибелі әдіскер-ұстазсың.
-                
-                Мектеп стандартының деректері:
-                - Сынып және пән: {selected_grade}, {selected_subject}
-                - Бағалау түрі: {assessment_type} ({selected_term})
-                - Тапсырма тақырыбы/мазмұны: {task_topic}
-                - Жалпы ең жоғарғы ұпай: {int(max_score)} балл.
-                
-                МАҢҚЫЗДЫ ТАЛАП:
-                "Оқу мақсаттары" бөлімінде міндетті түрде Қазақстан Республикасының ресми пәндік бағдарламасындағы **оқу мақсатының коды мен толық мәтінін** жазу керек.
-                
-                Жауапты мына форматта бер:
-                [ШАРТ] ... [/ШАРТ]
-                [ОҚУ_МАҚСАТТАРЫ] ... [/ОҚУ_МАҚСАТТАРЫ]
-                [БАҒАЛАУ_КРИТЕРИЙІ] ... [/БАҒАЛАУ_КРИТЕРИЙІ]
-                [ДЕСКРИПТОР] ... [/ДЕСКРИПТОР]
-                [МАҚСАТТАР_ҚОЛ_ЖЕТКІЗІЛГЕН] ... [/МАҚСАТТАР_ҚОЛ_ЖЕТКІЗІЛГЕН]
-                [МАҚСАТТАР_ҚИЫНДЫҚ] ... [/МАҚСАТТАР_ҚИЫНДЫҚ]
-                """
-                
-                response = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.2
-                )
-                res_text = response.choices[0].message.content
-                
-                import re
-                t_match = re.search(r'\[ШАРТ\](.*?)\[/ШАРТ\]', res_text, re.DOTALL)
-                om_match = re.search(r'\[ОҚУ_МАҚСАТТАРЫ\](.*?)\[/ОҚУ_МАҚСАТТАРЫ\]', res_text, re.DOTALL)
-                bk_match = re.search(r'\[БАҒАЛАУ_КРИТЕРИЙІ\](.*?)\[/БАҒАЛАУ_КРИТЕРИЙІ\]', res_text, re.DOTALL)
-                d_match = re.search(r'\[ДЕСКРИПТОР\](.*?)\[/ДЕСКРИПТОР\]', res_text, re.DOTALL)
-                a_match = re.search(r'\[МАҚСАТТАР_ҚОЛ_ЖЕТКІЗІЛГЕН\](.*?)\[/МАҚСАТТАР_ҚОЛ_ЖЕТКІЗІЛГЕН\]', res_text, re.DOTALL)
-                s_match = re.search(r'\[МАҚСАТТАР_ҚИЫНДЫҚ\](.*?)\[/МАҚСАТТАР_ҚИЫНДЫҚ\]', res_text, re.DOTALL)
-                
-                if t_match:
-                    task_topic = t_match.group(1).strip()
-                if om_match:
-                    st.session_state['generated_learning_objectives'] = om_match.group(1).strip()
-                if bk_match:
-                    st.session_state['generated_assessment_criteria'] = bk_match.group(1).strip()
-                if d_match:
-                    st.session_state['generated_descriptors'] = d_match.group(1).strip()
-                if a_match:
-                    st.session_state['generated_achieved'] = a_match.group(1).strip()
-                if s_match:
-                    st.session_state['generated_struggling'] = s_match.group(1).strip()
-                
-                st.success("✅ Барлық параметрлер мен ресми кодты оқу мақсаттары генерацияланды!")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Генерация қатесі: {e}")
-
-    default_lo_text = st.session_state.get('generated_learning_objectives', default_learning_objectives)
-    learning_objectives = st.text_area("📚 Оқу мақсаттары (Кодтарымен)", value=default_lo_text, height=90)
-
-    default_ac_text = st.session_state.get('generated_assessment_criteria', default_assessment_criteria)
-    assessment_criteria = st.text_area("📋 Бағалау критерийі", value=default_ac_text, height=90)
-
-    default_desc_text = st.session_state.get('generated_descriptors', default_desc)
-    descriptors = st.text_area("Бағалау дескрипторлары", value=default_desc_text, height=120)
-    
-    default_achieved_text = st.session_state.get('generated_achieved', default_achieved_goals)
-    achieved_goals = st.text_area("🎯 Қол жеткізілген мақсаттар", value=default_achieved_text, height=90)
-
-    default_struggling_text = st.session_state.get('generated_struggling', default_struggling_goals)
-    struggling_goals = st.text_area("⚠️ Қиындық тудырған мақсаттар", value=default_struggling_text, height=90)
+    max_score = st.number_input(
+        "Ең жоғары балл (Шкала)", 
+        min_value=1.0, 
+        max_value=50.0, 
+        value=10.0, 
+        step=1.0
+    )
 
     uploaded_files = st.file_uploader("Оқушылардың жұмыс файлдарын жүктеу (JPG, PNG, PDF)", type=["jpg", "jpeg", "png", "pdf"], accept_multiple_files=True)
     
@@ -424,7 +208,7 @@ elif menu == "Жұмысты тексеру":
                 with col_form:
                     student_name_key = f"student_name_{idx}"
                     if student_name_key not in st.session_state:
-                        st.session_state[student_name_key] = f"{selected_grade}-0{idx+1}"
+                        st.session_state[student_name_key] = f"Оқушы-0{idx+1}"
 
                     st_code = st.text_input("Оқушы аты-жөні", value=st.session_state[student_name_key], key=f"name_input_{idx}")
                     
@@ -433,41 +217,35 @@ elif menu == "Жұмысты тексеру":
                         st.session_state[ai_res_key] = ""
 
                     # ЖИ ТЕКСЕРУ БАТЫРМАСЫ
-                    if st.button("🟢 Тексеру", key=f"ai_btn_{idx}"):
+                    if st.button("🟢 Автоматты тексеру", key=f"ai_btn_{idx}"):
                         current_balance = get_user_credits(current_user)
                         
                         if not is_admin and current_balance < 1.0:
                             st.error("❌ Балансыңызда кредит жеткіліксіз!")
                         else:
-                            with st.spinner("ЖИ суреттегі әрбір тапсырма мен тармақты (1-тапсырма, 2-тапсырма) оқып, толық тексеруде..."):
+                            with st.spinner("ЖИ ҚР білім стандартына сәйкес жұмысты толық талдап жатыр..."):
                                 try:
                                     images_b64 = process_uploaded_file(uploaded_file)
                                     
+                                    # ҚР білім стандартына сай автоматты тексеру промпты
                                     prompt_text = f"""
-Сен — Қазақстан мектептерінің тәжірибелі пән мұғалімі әрі сарапшысысың. 
-Суреттегі оқушының қолжазба жұмысын өте мұқият оқып шық. Жұмыста барлық тапсырмалар (1-тапсырма а, ә, б және 2-тапсырма а, б, в) бар. Соларды жеке-жеке тексер.
+Сен — Қазақстан Республикасының орта білім беру стандарты мен критериалды бағалау жүйесін жеткіді білетін тәжірибелі сарапшы-ұстазсың. 
+Суреттегі оқушының жазбаша жұмысын өте мұқият оқып шық. Жұмыстағы барлық тапсырмалар мен тармақтарды (1-тапсырма, 2-тапсырма, а, б, в т.б.) анықтап, жеке-жеке тексер.
 
-МІНДЕТТІ ТҮРДЕ ОРЫНДАЛАТЫН ЕРЕЖЕЛЕР:
-1. Жұмыстағы ӘРБІР тапсырманы және олардың барлық тармақтарын ТІЗБЕКТЕП ЖЕКЕ-ЖЕКЕ жазып шық.
-2. Әрбір тармақтың тұсына міндетті түрде мына белгілердің бірін қой:
-   - 🟢 [Дұрыс] — жауап дұрыс болса.
+СТАНДАРТҚА САЙ ТЕКСЕРУ ЕРЕЖЕЛЕРІ:
+1. Әрбір тапсырманы және оның тармақтарын жеке тізбектеп көрсет.
+2. Әр тармаққа міндетті түрде мына белгілердің бірін қой:
+   - 🟢 [Дұрыс] — жауап толық дұрыс болса.
    - 🔴 [Қате] — жауап қате немесе орындалмаған болса.
    - 🟡 [Жартылай] — жартылай дұрыс болса.
-3. Әр тармақтың бағалану себебін немесе оқушының жауабын неліктен қате/дұрыс деп бағалағаныңды нақты түсіндіріп жаз.
-4. Соңында барлық ұпайды қосып, міндетті түрде дәл мына форматта жаз:
+3. Әр бағалаудың себебін қысқаша түсіндіріп жаз.
+4. Барлық жиналған ұпайды есептеп, соңында міндетті түрде мына форматта жаз:
    Жиынтық балл: X/{int(max_score)}
 
-БЕРІЛГЕН ПАРАМЕТРЛЕР:
-- Тапсырма тақырыбы: {task_topic}
-- Оқу мақсаттары: {learning_objectives}
-- Бағалау критерийі: {assessment_criteria}
-- Дескрипторлар: {descriptors}
-- Ең жоғарғы балл: {int(max_score)} балл.
-
 ФОРМАТ ТАЛАБЫ:
-1. Бірінші кезекте оқушының аты-жөнін тауып, мына форматта жаз:
-   [ОҚУШЫ_АТЫ] Аты Жөні [/ОҚУШЫ_АТЫ] (егер жоқ болса "Белгісіз оқушы").
-2. Әр тапсырма мен оның тармақтарын бөлек жолдармен анықтап жаз.
+1. Оқушының аты-жөнін жұмыс бетінен тауып жаз:
+   [ОҚУШЫ_АТЫ] Аты Жөні [/ОҚУШЫ_АТЫ] (егер табылмаса "Белгісіз оқушы").
+2. Барлық тапсырмаларды жеке жолдармен сипаттап шық.
 3. Соңында міндетті түрде 'Жиынтық балл: X/{int(max_score)}' түрінде көрсет.
 """
                                     messages_content = [{"type": "text", "text": prompt_text}]
@@ -480,7 +258,7 @@ elif menu == "Жұмысты тексеру":
                                     response = client.chat.completions.create(
                                         model="gpt-4o",
                                         messages=[
-                                            {"role": "system", "content": f"Сіз оқушы жұмыстарындағы әрбір тапсырманы жеке-жеке талдап, 🟢 [Дұрыс], 🔴 [Қате], 🟡 [Жартылай] белгілерімен бағалайтын және барлық баллды қатаң түрде {int(max_score)} баллдық шкалаға сай есептейтін тәжірибелі мұғалімсіз."},
+                                            {"role": "system", "content": f"Сіз ҚР білім беру стандартына сай оқушы жұмыстарын қатаң әрі әділ тексеретін, әр тапсырманы бөлек бағалайтын және қорытынды ұпайды {int(max_score)} баллдық шкаламен есептейтін мұғалімсіз."},
                                             {"role": "user", "content": messages_content}
                                         ],
                                         max_tokens=2500,
@@ -509,14 +287,14 @@ elif menu == "Жұмысты тексеру":
                                     st.session_state[ai_res_key] = full_ai_resp
                                     if not is_admin:
                                         deduct_credit(current_user, amount=1.0)
-                                    st.success("✅ Жұмыс әр тапсырма бойынша жеке талданып, сәтті тексерілді!")
+                                    st.success("✅ Жұмыс стандарқа сай сәтті тексерілді!")
                                 except Exception as e:
                                     st.error(f"Қате пайда болды: {e}")
 
                     current_ai_text = st.session_state.get(ai_res_key, "")
                     
                     if current_ai_text:
-                        st.markdown("### 🎨 Талдау мен сәйкестік картасы:")
+                        st.markdown("### 🎨 Талдау нәтижесі:")
                         lines = current_ai_text.split('\n')
                         for line in lines:
                             if any(k in line for k in ['🟢', '[Дұрыс]', 'дұрыс']):
@@ -528,24 +306,24 @@ elif menu == "Жұмысты тексеру":
                             elif line.strip():
                                 st.write(line)
                     else:
-                        st.info("ℹ️ Жұмысты тексеру үшін жоғарыдағы **🟢 Тексеру** батырмасын басыңыз.")
+                        st.info("ℹ️ Тексеру үшін жоғарыдағы **🟢 Автоматты тексеру** батырмасын басыңыз.")
 
                     prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=st.session_state.get(f"score_{idx}", 0.0), step=0.5, key=f"score_{idx}")
                     explanation = st.text_area("Толық кері байланыс мәтіні", value=current_ai_text, height=250, key=f"exp_{idx}")
                     
-                    if st.button("💾 Тексеруге сақтау", key=f"save_btn_{idx}"):
+                    if st.button("💾 Нәтижені сақтау", key=f"save_btn_{idx}"):
                         current_st_name = st_code.strip() if st_code.strip() else st.session_state[student_name_key]
                         if current_st_name:
-                            full_feedback = f"Кері байланыс пен белгілер:\n{explanation.strip()}\n\n📚 Оқу мақсаттары:\n{learning_objectives.strip()}\n\n📋 Бағалау критерийі:\n{assessment_criteria.strip()}\n\n🎯 Қол жеткізілген мақсаттар:\n{achieved_goals.strip()}\n\n⚠️ Қиындық тудырған мақсаттар:\n{struggling_goals.strip()}"
+                            full_feedback = f"Кері байланыс:\n{explanation.strip()}"
                             save_pending_result(
                                 current_st_name, 
-                                f"[{selected_term} | {prefix_text} | {selected_grade} - {selected_subject}] {task_topic.strip()}", 
-                                descriptors.strip(), 
+                                f"[Автоматты тексеру] Оқушы жұмысы", 
+                                "ҚР стандарттары бойынша критериалды бағалау", 
                                 float(prop_score), 
                                 float(max_score), 
                                 full_feedback
                             )
-                            st.success("✅ Тексеруге сәтті сақталды!")
+                            st.success("✅ Нәтиже сәтті сақталды!")
                         else:
                             st.error("❌ Оқушы аты-жөнін енгізіңіз!")
 
@@ -590,10 +368,9 @@ elif menu == "Балансты толтыру":
     st.markdown(f"**Төленетін жалпы сома:** <span style='color: #10b981; font-size: 20px; font-weight: bold;'>{amount:,.0f} ₸</span>", unsafe_allow_html=True)
     
     st.markdown("---")
-    st.info("📱 **Төлем жасау қадамдары:**\n1. Төмендегі QR кодтардың бірін (Kaspi немесе Halyk) сканерлеңіз;\n2. Көрсетілген соманы аударыңыз;\n3. Төлем чегіндегі транзакция / чек нөмірін төмендегі өріске енгізіп, растауға жіберіңіз.")
+    st.info("📱 **Төлем жасау қадамдары:**\n1. Төмендегі QR кодтардың бірін сканерлеңіз;\n2. Соманы аударыңыз;\n3. Төлем чегіндегі транзакция / чек нөмірін енгізіңіз.")
     
     qr_col1, qr_col2 = st.columns(2)
-    
     with qr_col1:
         st.write("### 🟡 Kaspi QR арқылы төлеу")
         if os.path.exists("kaspi_qr_ИЗС.png"):
@@ -610,7 +387,7 @@ elif menu == "Балансты толтыру":
     
     with st.form("payment_verification_form"):
         st.write("### Төлемді растау үшін деректерді енгізіңіз:")
-        txn_id = st.text_input("Kaspi немесе Halyk транзакция/чек нөмірі", placeholder="Чектегі транзакция немесе операция нөмірін жазыңыз...")
+        txn_id = st.text_input("Транзакция / чек нөмірі", placeholder="Операция нөмірін жазыңыз...")
         
         submit_payment = st.form_submit_button("📤 Төлем туралы хабарлау")
         
@@ -620,7 +397,7 @@ elif menu == "Балансты толтыру":
             else:
                 try:
                     add_payment_record(current_user, amount, float(credits_to_buy), txn_id.strip())
-                    st.success(f"✅ Төлем туралы өтінім қабылданды! Транзакция коды: {txn_id}. Әкімші (Zoya) тексергеннен кейін балансыңызға {credits_to_buy} кредит қосылады.")
+                    st.success(f"✅ Өтінім қабылданды! Тексерілгеннен кейін балансыңызға {credits_to_buy} кредит қосылады.")
                 except Exception as e:
                     st.error(f"Қате орын алды: {e}")
 
@@ -629,15 +406,5 @@ elif menu == "Қауіпсіздік":
         st.error("⛔ Бұл бетке тек әкімші (admin) ғана кіре алады!")
         st.stop()
 
-    st.subheader("Қауіпсіздік және файл күйі (Диагностика)")
+    st.subheader("Қауіпсіздік және жүйе күйі")
     st.write(f"Ағымдағы пайдаланушы: **{current_user}** | Баланс: **{user_balance} кредит** ({total_tenge:,.0f} ₸)")
-    st.markdown("---")
-    
-    if not specs_df.empty:
-        st.success(f"✅ Спецификация файлы сәтті оқылды! Жалпы жолдар саны: **{len(specs_df)}**")
-        st.write("**Файлдағы табылған бағандар:**", list(specs_df.columns))
-        st.dataframe(specs_df.head(5))
-    else:
-        st.error("❌ Спецификация файлы табылмады немесе баған атаулары қате.")
-        for log in load_logs:
-            st.warning(log)
