@@ -466,10 +466,11 @@ elif menu == "Жұмысты тексеру":
                                     response = client.chat.completions.create(
                                         model="gpt-4o",
                                         messages=[
-                                            {"role": "system", "content": f"Сіз оқушы жұмыстарындағы әрбір тапсырма мен тармақты жеке талдап, 🟢 [Дұрыс], 🔴 [Қате], 🟡 [Жартылай] белгілерімен бағалайтын және барлық баллды қатаң түрде {int(max_score)} баллдық шкалаға сай есептейтін ұстазсыз."},
+                                            {"role": "system", "content": f"Сіз оқушы жұмыстарындағы әрбір тапсырма мен тармақты жеке талдап, 🟢 [Дұрыс], 🔴 [Қате], 🟡 [Жартылай] белгілерімен бағалайтын және барлық баллды қатаң түрде {int(max_score)} баллдық шкалаға сай есептейтін қатаң да әділ ұстазсыз."},
                                             {"role": "user", "content": messages_content}
                                         ],
-                                        max_tokens=1500
+                                        max_tokens=1500,
+                                        temperature=0.1
                                     )
                                     
                                     full_ai_resp = response.choices[0].message.content
@@ -482,7 +483,6 @@ elif menu == "Жұмысты тексеру":
                                             st.session_state[student_name_key] = found_name
                                         full_ai_resp = re.sub(r'\[ОҚУШЫ_АТЫ\].*?\[/ОҚУШЫ_АТЫ\]', '', full_ai_resp).strip()
                                     
-                                    # Баллды автоматты түрде тауып, алдын ала ұпайға беруге тырысу
                                     score_match = re.search(r'Жиынтық балл:\s*([\d\.]+)', full_ai_resp, re.IGNORECASE)
                                     if score_match:
                                         try:
