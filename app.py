@@ -213,7 +213,7 @@ elif menu == "Жұмысты тексеру":
                     st_code = st.text_input("Оқушы аты-жөні", value=st.session_state[student_name_key], key=f"name_input_{idx}")
                     
                     ai_res_key = f"ai_result_{idx}"
-                    if ai_res_key not in st.session_state or st.session_state[ai_res_key] == "Бағаны мұғалім тексеруі қажет.":
+                    if ai_res_key not in st.session_state:
                         st.session_state[ai_res_key] = ""
 
                     # ЖИ ТЕКСЕРУ БАТЫРМАСЫ
@@ -307,7 +307,6 @@ elif menu == "Жұмысты тексеру":
                     else:
                         st.info("ℹ️ Тексеру үшін жоғарыдағы **🟢 Автоматты тексеру** батырмасын басыңыз.")
 
-                    # «Алдын ала ұпай» өрісінің атауы «Жалпы жинаған ұпай саны» болып ауыстырылды
                     prop_score = st.number_input(
                         "Жалпы жинаған ұпай саны", 
                         min_value=0.0, 
@@ -316,7 +315,14 @@ elif menu == "Жұмысты тексеру":
                         step=0.5, 
                         key=f"score_{idx}"
                     )
-                    explanation = st.text_area("Толық кері байланыс мәтіні", value=current_ai_text, height=250, key=f"exp_{idx}")
+                    
+                    # Мұғалім өз пікірін қоса алатын етіп атауы толықтырылды
+                    explanation = st.text_area(
+                        "Толық кері байланыс мәтіні (Қажет болған жағдайда мұғалім өз пікірін қоса алады)", 
+                        value=current_ai_text, 
+                        height=250, 
+                        key=f"exp_{idx}"
+                    )
                     
                     if st.button("💾 Нәтижені сақтау", key=f"save_btn_{idx}"):
                         current_st_name = st_code.strip() if st_code.strip() else st.session_state[student_name_key]
