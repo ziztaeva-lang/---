@@ -16,7 +16,7 @@ from security_layer import (
 st.set_page_config(page_title="SmartTest БЖБ–ТЖБ", layout="wide")
 init_db()
 
-# --- ЗАМАНАУИ МИНИМАЛИЗМ CSS СТИЛЬДЕРІ ---
+# --- ЗАМАНАУИ МИНИМАЛИЗМ CSS СТИЛЬДЕРІ МЕН БЕЛГІЛЕР —
 st.markdown("""
 <style>
     .stApp {
@@ -54,6 +54,30 @@ st.markdown("""
         border-radius: 12px;
         border: 1px solid #e2e8f0;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+    .correct-card {
+        background-color: #ecfdf5;
+        border-left: 5px solid #10b981;
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        color: #065f46;
+    }
+    .incorrect-card {
+        background-color: #fef2f2;
+        border-left: 5px solid #ef4444;
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        color: #991b1b;
+    }
+    .warning-card {
+        background-color: #fffbeb;
+        border-left: 5px solid #f59e0b;
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        color: #92400e;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -400,7 +424,7 @@ elif menu == "Жұмысты тексеру":
                     if ai_res_key not in st.session_state:
                         st.session_state[ai_res_key] = "Бағаны мұғалім тексеруі қажет."
 
-                    # Тексеру батырмасы (st.rerun() алып тасталды, нәтиже тікелей session_state арқылы сақталады)
+                    # Тексеру батырмасы (🟢 Дұрыс / 🔴 Қате түсті визуалды белгілермен)
                     if st.button("🟢 Тексеру", key=f"ai_btn_{idx}"):
                         current_balance = get_user_credits(current_user)
                         
@@ -418,8 +442,8 @@ elif menu == "Жұмысты тексеру":
 ҚАТАҢ БАҒАЛАУ ШАРТЫ ЖӘНЕ ТҮС ЖҮЙЕСІ:
 1. Жалпы максималды балл ДӘЛ {int(max_score)} БАЛЛ. Басқа шкала қолдануға БОЛМАЙДЫ.
 2. Әр тапсырма мен тармақты тексерген кезде мына белгілеу жүйесін қатаң қолдан:
-   - 🟢 [Дұрыс] — Жауап толық дұрыс.
-   - 🔴 [Қате] — Жауап қате немесе дескриптор орындалмаған.
+   - 🟢 [Дұрыс] — Жауап толық дұрыс (Неге дұрыс екенін қысқаша жаз).
+   - 🔴 [Қате] — Жауап қате немесе дескриптор орындалмаған (Қай жерінде қате жіберілгенін дәл айт).
    - 🟡 [Жартылай] — Жартылай дұрыс немесе мұғалімнің қосымша тексеруін/назар аударуын талап етеді.
 3. Қорытынды баллды тек 'Жиынтық балл: X/{int(max_score)}' форматында көрсет.
 
@@ -469,10 +493,22 @@ elif menu == "Жұмысты тексеру":
                                 except Exception as e:
                                     st.error(f"Қате пайда болды: {e}")
 
-                    # Нәтижені көрсету
+                    # Нәтижені визуализациялау (Жасыл/Қызыл/Сары блоктарға бөліп көрсету)
                     current_ai_text = st.session_state.get(ai_res_key, "Бағаны мұғалім тексеруі қажет.")
+                    
+                    if current_ai_text != "Бағаны мұғалім тексеруі қажет.":
+                        st.markdown("### 🎨 Талдау мен сәйкестік картасы:")
+                        lines = current_ai_text.split('\n')
+                        for line in lines:
+                            if '🟢' in line or '[Дұрыс]' in line:
+                                st.markdown(f"<div class='correct-card'>{line}</div>", unsafe_allow_html=True)
+                            elif '🔴' in line or '[Қате]' in line:
+                                st.markdown(f"<div class='incorrect-card'>{line}</div>", unsafe_allow_html=True)
+                            elif '🟡' in line or '[Жартылай]' in line:
+                                st.markdown(f"<div class='warning-card'>{line}</div>", unsafe_allow_html=True)
+
                     prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=0.0, step=0.5, key=f"score_{idx}")
-                    explanation = st.text_area("Кері байланыс (🟢/🔴/🟡 белгілерімен)", value=current_ai_text, height=200, key=f"exp_{idx}")
+                    explanation = st.text_area("Толық кері байланыс мәтіні (Редакциялауға болады)", value=current_ai_text, height=180, key=f"exp_{idx}")
                     
                     if st.button("💾 Тексеруге сақтау", key=f"save_btn_{idx}"):
                         current_st_name = st_code.strip() if st_code.strip() else st.session_state[student_name_key]
@@ -531,7 +567,7 @@ elif menu == "Балансты толтыру":
     st.markdown(f"**Төленетін жалпы сома:** <span style='color: #10b981; font-size: 20px; font-weight: bold;'>{amount:,.0f} ₸</span>", unsafe_allow_html=True)
     
     st.markdown("---")
-    st.info("📱 **Төлем жасау қадамдары:**\n1. Төмендегі QR кодтардың бірін (Kaspi немесе Halyk) сканерлеңіз;\n2. Көрсетілген соманы аударыңыз;\n3. Төлем чегіндегі транзакция / чек нөмірін төмендегі өріске енгізіп, растауға жіберіңіз.")
+    st.info("📱 **Төлем жасау қадамдары:**\n1. Төмендегі QR кодтардың бірін (Kaspi немесе Halyk) сканерлеңіз;\n2. КөРСетілген соманы аударыңыз;\n3. Төлем чегіндегі транзакция / чек нөмірін төмендегі өріске енгізіп, растауға жіберіңіз.")
     
     qr_col1, qr_col2 = st.columns(2)
     
