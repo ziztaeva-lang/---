@@ -227,7 +227,6 @@ elif menu == "Жұмысты тексеру":
                                 try:
                                     images_b64 = process_uploaded_file(uploaded_file)
                                     
-                                    # ҚР білім стандартына сай автоматты тексеру промпты
                                     prompt_text = f"""
 Сен — Қазақстан Республикасының орта білім беру стандарты мен критериалды бағалау жүйесін жеткіді білетін тәжірибелі сарапшы-ұстазсың. 
 Суреттегі оқушының жазбаша жұмысын өте мұқият оқып шық. Жұмыстағы барлық тапсырмалар мен тармақтарды (1-тапсырма, 2-тапсырма, а, б, в т.б.) анықтап, жеке-жеке тексер.
@@ -308,7 +307,15 @@ elif menu == "Жұмысты тексеру":
                     else:
                         st.info("ℹ️ Тексеру үшін жоғарыдағы **🟢 Автоматты тексеру** батырмасын басыңыз.")
 
-                    prop_score = st.number_input("Алдын ала ұпай", min_value=0.0, max_value=float(max_score), value=st.session_state.get(f"score_{idx}", 0.0), step=0.5, key=f"score_{idx}")
+                    # «Алдын ала ұпай» өрісінің атауы «Жалпы жинаған ұпай саны» болып ауыстырылды
+                    prop_score = st.number_input(
+                        "Жалпы жинаған ұпай саны", 
+                        min_value=0.0, 
+                        max_value=float(max_score), 
+                        value=st.session_state.get(f"score_{idx}", 0.0), 
+                        step=0.5, 
+                        key=f"score_{idx}"
+                    )
                     explanation = st.text_area("Толық кері байланыс мәтіні", value=current_ai_text, height=250, key=f"exp_{idx}")
                     
                     if st.button("💾 Нәтижені сақтау", key=f"save_btn_{idx}"):
