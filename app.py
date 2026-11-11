@@ -228,7 +228,7 @@ elif menu == "Жұмысты тексеру":
                                     images_b64 = process_uploaded_file(uploaded_file)
                                     
                                     prompt_text = f"""
-Сен — Қазақстан Республикасының орта білім беру стандарты мен критериалды бағалау жүйесін жеткіді білетін тәжірибелі сарапшы-ұстазсың. 
+Сен — Қазақстан Республикасының орта білім беру стандарты мен критериалды бағалау жүйесін жеттік білетін тәжірибелі сарапшы-ұстазсың. 
 Суреттегі оқушының жазбаша жұмысын өте мұқият оқып шық. Жұмыстағы барлық тапсырмалар мен тармақтарды (1-тапсырма, 2-тапсырма, а, б, в т.б.) анықтап, жеке-жеке тексер.
 
 СТАНДАРТҚА САЙ ТЕКСЕРУ ЕРЕЖЕЛЕРІ:
@@ -283,10 +283,14 @@ elif menu == "Жұмысты тексеру":
                                         except:
                                             pass
 
+                                    # Нәтижені сессия күйіне тікелей жазамыз, өріс автоматты түрде жаңарады
                                     st.session_state[ai_res_key] = full_ai_resp
+                                    st.session_state[f"exp_text_{idx}"] = full_ai_resp
+                                    
                                     if not is_admin:
                                         deduct_credit(current_user, amount=1.0)
                                     st.success("✅ Жұмыс стандарқа сай сәтті тексерілді!")
+                                    st.rerun()
                                 except Exception as e:
                                     st.error(f"Қате пайда болды: {e}")
 
@@ -316,12 +320,16 @@ elif menu == "Жұмысты тексеру":
                         key=f"score_{idx}"
                     )
                     
-                    # Мұғалім өз пікірін қоса алатын етіп атауы толықтырылды
+                    exp_key = f"exp_text_{idx}"
+                    if exp_key not in st.session_state:
+                        st.session_state[exp_key] = current_ai_text
+
+                    # Сессия арқылы мәтін өрісі автоматты түрде толтырылады
                     explanation = st.text_area(
                         "Толық кері байланыс мәтіні (Қажет болған жағдайда мұғалім өз пікірін қоса алады)", 
-                        value=current_ai_text, 
+                        value=st.session_state[exp_key], 
                         height=250, 
-                        key=f"exp_{idx}"
+                        key=exp_key
                     )
                     
                     if st.button("💾 Нәтижені сақтау", key=f"save_btn_{idx}"):
