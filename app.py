@@ -4,6 +4,7 @@ import base64
 import pandas as pd
 import io
 import os
+import re
 import fitz  # PyMuPDF кітапханасы (PDF-ті суретке айналдыру үшін)
 from openai import OpenAI
 from security_layer import (
@@ -16,7 +17,7 @@ from security_layer import (
 st.set_page_config(page_title="SmartTest БЖБ–ТЖБ", layout="wide")
 init_db()
 
-# --- ЗАМАНАУИ МИНИМАЛИЗМ CSS СТИЛЬДЕРІ МЕН БЕЛГІЛЕР —
+# --- ЗАМАНАУИ МИНИМАЛИЗМ CSS СТИЛЬДЕРІ МЕН БЕЛГІЛЕР ---
 st.markdown("""
 <style>
     .stApp {
@@ -81,6 +82,15 @@ st.markdown("""
         margin-bottom: 10px;
         color: #92400e;
         font-weight: 500;
+    }
+    .analysis-box {
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-left: 6px solid #3b82f6;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 15px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -233,7 +243,7 @@ elif menu == "Жұмысты тексеру":
 
 ТАРМАҚТАРДЫ БЕЛГІЛЕУ ЕРЕЖЕСІ:
 1. Жұмыста қалай жазылған болса, сол форматты қолдан: қазақша әріптер (а, ә, б, в, г) немесе латын әріптері (a, b, c, d).
-2. Әрбір тапсырмаға сәйкес белгі қой:
+2. Әрбір тапсырманың тақырыбын немесе оқу мақсатын (егер бетте жазылған болса немесе мазмұнынан анықталса) қысқаша көрсетіп, сәйкес белгі қой:
    - 🟢 [Дұрыс] — жауап толық дұрыс болса.
    - 🔴 [Қате] — жауап қате немесе орындалмаған болса.
    - 🟡 [Жартылай] — жартылай дұрыс болса.
@@ -257,7 +267,7 @@ elif menu == "Жұмысты тексеру":
                                     response = client.chat.completions.create(
                                         model="gpt-4o",
                                         messages=[
-                                            {"role": "system", "content": f"Сіз ҚР білім беру стандартына сай оқушы жұмыстарын тексеретін ұстазсыз."},
+                                            {"role": "system", "content": "Сіз ҚР білім беру стандартына сай оқушы жұмыстарын тексеретін ұстазсыз."},
                                             {"role": "user", "content": messages_content}
                                         ],
                                         max_tokens=2500,
@@ -266,7 +276,6 @@ elif menu == "Жұмысты тексеру":
                                     
                                     full_ai_resp = response.choices[0].message.content
                                     
-                                    import re
                                     name_match = re.search(r'\[ОҚУШЫ_АТЫ\](.*?)\[/ОҚУШЫ_АТЫ\]', full_ai_resp, re.DOTALL)
                                     if name_match:
                                         found_name = name_match.group(1).strip()
@@ -288,7 +297,7 @@ elif menu == "Жұмысты тексеру":
                                     
                                     if not is_admin:
                                         deduct_credit(current_user, amount=1.0)
-                                    st.success("✅ Жұмыс стандарқа сай сәтті тексерілді!")
+                                    st.success("✅ Жұмыс стандартқа сай сәтті тексерілді!")
                                     st.rerun()
                                 except Exception as e:
                                     st.error(f"Қате пайда болды: {e}")
@@ -369,7 +378,7 @@ elif menu == "Нәтижелер":
         st.dataframe(df_res)
 
 elif menu == "Статистика":
-    st.subheader("📊 Сыныптың статистикасы мен аналитикасы")
+    st.subheader("📊 Сыныптың статистикасы мен педагогикалық талдау")
     rows = get_approved_results()
     if not rows:
         st.info("Әзірге бекітілген нәтижелер жоқ. Статистика шығару үшін жұмыстарды тексеріп, бекітіңіз.")
@@ -381,14 +390,14 @@ elif menu == "Статистика":
         avg_score = df_stat['teacher_score'].mean()
         max_possible = df_stat['max_score'].mean() if 'max_score' in df_stat.columns else 10.0
         
-        # Сапа мен үлгерім пайызын есептеу (Мысалы: 50%-дан жоғары алғандар үлгерім, 70%-дан жоғары алғандар сапа)
+        # ҚР стандарты бойынша бағалау шкаласы (0-39%: 2, 40-64%: 3, 65-84%: 4, 85-100%: 5)
         if 'max_score' in df_stat.columns and max_possible > 0:
             df_stat['percentage'] = (df_stat['teacher_score'] / df_stat['max_score']) * 100
-            passing_count = len(df_stat[df_stat['percentage'] >= 50])
-            quality_count = len(df_stat[df_stat['percentage'] >= 65])
         else:
-            passing_count = len(df_stat[df_stat['teacher_score'] >= (max_possible * 0.5)])
-            quality_count = len(df_stat[df_stat['teacher_score'] >= (max_possible * 0.7)])
+            df_stat['percentage'] = (df_stat['teacher_score'] / max_possible) * 100
+
+        passing_count = len(df_stat[df_stat['percentage'] >= 40])
+        quality_count = len(df_stat[df_stat['percentage'] >= 65])
             
         passing_rate = (passing_count / total_students) * 100
         quality_rate = (quality_count / total_students) * 100
@@ -396,7 +405,7 @@ elif menu == "Статистика":
         # Метрикалар панелі
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Оқушы саны", f"{total_students}")
-        col2.metric("Орташа балл", f"{avg_score:.1f}")
+        col2.metric("Орташа балл", f"{avg_score:.1f} / {max_possible:.0f}")
         col3.metric("Үлгерім пайызы", f"{passing_rate:.1f}%")
         col4.metric("Сапа пайызы", f"{quality_rate:.1f}%")
 
@@ -406,18 +415,91 @@ elif menu == "Статистика":
             st.bar_chart(df_stat.set_index('student_code')['teacher_score'])
 
         st.markdown("---")
+        st.write("### 🧠 Оқу мақсаттары бойынша автоматты педагогикалық талдау")
+        st.write("БЖБ / ТЖБ қорытынды анықтамасына арналған дайын талдау мәтінін құрастыру:")
+
+        if "class_ai_analysis" not in st.session_state:
+            st.session_state.class_ai_analysis = ""
+
+        if st.button("🤖 Қол жеткізген және қиындық туғызған мақсаттарды талдау"):
+            with st.spinner("ЖИ барлық оқушылардың қателері мен жетістіктерін қорытындылап жатыр..."):
+                try:
+                    # Барлық оқушылардың кері байланыс деректерін жинақтау
+                    feedback_records = []
+                    for _, r in df_stat.iterrows():
+                        st_name = r.get('student_code', 'Оқушы')
+                        sc = r.get('teacher_score', 0)
+                        mx = r.get('max_score', max_possible)
+                        fb = r.get('feedback', '') or r.get('rubric', '') or r.get('teacher_comment', '')
+                        feedback_records.append(f"Оқушы: {st_name} | Балл: {sc}/{mx}\nТалдауы:\n{fb}\n---")
+                    
+                    combined_data = "\n".join(feedback_records)
+
+                    analysis_prompt = f"""
+Сен — Қазақстан Республикасы мектептеріндегі БЖБ және ТЖБ қорытындылары бойынша аналитикалық анықтама дайындайтын тәжірибелі әдіскер-ұстазсың.
+Төмендегі сынып оқушыларының тексерілген жұмыстарының нәтижелері мен статистикасына сүйене отырып, ресми педагогикалық талдау жаз.
+
+СЫНЫП СТАТИСТИКАСЫ:
+- Барлық оқушы саны: {total_students}
+- Орташа балл: {avg_score:.1f} / {max_possible:.0f}
+- Үлгерім пайызы: {passing_rate:.1f}%
+- Білім сапасы: {quality_rate:.1f}%
+
+ОҚУШЫЛАРДЫҢ ЖҰМЫС НӘТИЖЕЛЕРІ МЕН ҚАТЕЛЕРІ:
+{combined_data[:12000]}
+
+ТАЛАП ЕТІЛЕТІН ҚҰРЫЛЫМ (Қазақ тілінде, ресми іскерлік-педагогикалық стильде):
+1. **Қол жеткізген оқу мақсаттары:** Оқушылардың басым бөлігі (🟢 белгіленген) сәтті меңгерген тақырыптар, дағдылар мен оқу мақсаттары.
+2. **Қиындық туғызған оқу мақсаттары:** Оқушылар жиі қате жіберген (🔴 және 🟡 белгіленген) тапсырмалар, тақырыптар мен оқу мақсаттары (нақты неден қателескенін көрсет).
+3. **Түзету (коррекциялық) жұмыстары бойынша ұсыныстар:** Қиындық туғызған мақсаттарды жою үшін мұғалімге арналған нақты әдістемелік ұсыныстар.
+"""
+                    resp = client.chat.completions.create(
+                        model="gpt-4o",
+                        messages=[
+                            {"role": "system", "content": "Сіз ҚР білім беру стандарты бойынша БЖБ/ТЖБ талдауын жасайтын әдіскерсіз."},
+                            {"role": "user", "content": analysis_prompt}
+                        ],
+                        max_tokens=1800,
+                        temperature=0.2
+                    )
+                    st.session_state.class_ai_analysis = resp.choices[0].message.content
+                except Exception as e:
+                    st.error(f"Талдау жасау кезінде қате шықты: {e}")
+
+        if st.session_state.class_ai_analysis:
+            st.markdown(f"<div class='analysis-box'>{st.session_state.class_ai_analysis}</div>", unsafe_allow_html=True)
+            st.text_area(
+                "Көшіріп алуға ыңғайлы мәтін (Word / Kundelik / BilimClass үшін):",
+                value=st.session_state.class_ai_analysis,
+                height=260
+            )
+
+        st.markdown("---")
         st.write("### 📥 Есепті жүктеп алу")
         
-        # Excel файлына экспорттау
+        # Excel файлына экспорттау (Статистика + Педагогикалық талдау жеке парақта)
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df_stat.to_excel(writer, index=False, sheet_name='Статистика')
+            df_stat.to_excel(writer, index=False, sheet_name='Оқушылар_нәтижесі')
+            
+            summary_df = pd.DataFrame({
+                "Көрсеткіш": ["Оқушы саны", "Орташа балл", "Үлгерім пайызы (%)", "Білім сапасы (%)", "Педагогикалық талдау"],
+                "Мәні": [
+                    total_students, 
+                    round(avg_score, 1), 
+                    round(passing_rate, 1), 
+                    round(quality_rate, 1),
+                    st.session_state.class_ai_analysis if st.session_state.class_ai_analysis else "Талдау жасалмаған"
+                ]
+            })
+            summary_df.to_excel(writer, index=False, sheet_name='Қорытынды_анализ')
+            
         excel_data = output.getvalue()
 
         st.download_button(
-            label="📊 Excel форматында жүктеу (.xlsx)",
+            label="📊 Толық есепті Excel форматында жүктеу (.xlsx)",
             data=excel_data,
-            file_name="SmartTest_Cynip_Statistikasy.xlsx",
+            file_name="SmartTest_Cynip_Analiz.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
