@@ -123,6 +123,59 @@ def process_uploaded_file(uploaded_file):
         
     return images_b64
 
+# --- ЖИ АРҚЫЛЫ БІР ЖҰМЫСТЫ ТЕКСЕРУ ФУНКЦИЯСЫ ---
+def evaluate_single_work(client, uploaded_file, max_score):
+    images_b64 = process_uploaded_file(uploaded_file)
+    prompt_text = f"""
+Сен — Қазақстан Республикасының орта білім беру стандарты мен критериалды бағалау жүйесін жеттік білетін тәжірибелі сарапшы-ұстазсың. №399, №125 және №348 бұйрықтардың талаптары мен дескрипторларды қатаң басшылыққа ал.
+Суреттегі оқушының жазбаша жұмысын өте мұқият оқып шық. Жұмыстағы барлық тапсырмалар мен тармақтарды анықтап, жеке-жеке тексер.
+
+ТАРМАҚТАРДЫ БЕЛГІЛЕУ ЕРЕЖЕСІ:
+1. Жұмыста қалай жазылған болса, сол форматты қолдан: қазақша әріптер (а, ә, б, в, г) немесе латын әріптері (a, b, c, d).
+2. Әрбір тапсырманың тақырыбын немесе оқу мақсатын (егер бетте жазылған болса немесе мазмұнынан анықталса) қысқаша көрсетіп, сәйкес белгі қой:
+   - 🟢 [Дұрыс] — жауап толық дұрыс болса.
+   - 🔴 [Қате] — жауап қате немесе орындалмаған болса.
+   - 🟡 [Жартылай] — жартылай дұрыс болса.
+3. Әр бағалаудың себебін қысқаша түсіндіріп жаз.
+4. Соңында міндетті түрде мына форматта жаз:
+   Жиынтық балл: X/{int(max_score)}
+
+ФОРМАТ ТАЛАБЫ:
+1. Барлық тапсырмаларды жеке жолдармен сипаттап шық.
+2. Соңында 'Жиынтық балл: X/{int(max_score)}' түрінде көрсет.
+"""
+    messages_content = [{"type": "text", "text": prompt_text}]
+    for img_b64 in images_b64:
+        messages_content.append({
+            "type": "image_url",
+            "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}
+        })
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "Сіз ҚР білім беру стандартына сай оқушы жұмыстарын тексеретін ұстазсыз."},
+            {"role": "user", "content": messages_content}
+        ],
+        max_tokens=2500,
+        temperature=0.1
+    )
+    
+    full_ai_resp = response.choices[0].message.content
+    full_ai_resp = re.sub(r'\[ОҚУШЫ_АТЫ\].*?\[/ОҚУШЫ_АТЫ\]', '', full_ai_resp).strip()
+    
+    extracted_score = 0.0
+    score_match = re.search(r'Жиынтық балл:\s*([\d\.]+)', full_ai_resp, re.IGNORECASE)
+    if score_match:
+        try:
+            val = float(score_match.group(1))
+            if val <= float(max_score):
+                extracted_score = val
+        except:
+            pass
+            
+    return full_ai_resp, extracted_score
+
 # --- АУТЕНТИФИКАЦИЯ ---
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
@@ -202,11 +255,82 @@ elif menu == "Жұмысты тексеру":
     uploaded_files = st.file_uploader("Оқушылардың жұмыс файлдарын жүктеу (JPG, PNG, PDF)", type=["jpg", "jpeg", "png", "pdf"], accept_multiple_files=True)
     
     if uploaded_files:
-        st.success(f"Барлығы {len(uploaded_files)} файл жүктелді.")
+        st.success(f"Барлығы {len(uploaded_files)} файл жүктелді. Төменде әр оқушының аты-жөнін енгізіңіз.")
+        
+        # --- ЖАППАЙ ТЕКСЕРУ ЖӘНЕ САҚТАУ БАТЫРМАЛАРЫ ---
+        bulk_col1, bulk_col2 = st.columns(2)
+        with bulk_col1:
+            if st.button("⚡ Барлық жұмысты бірден тексеру", use_container_width=True):
+                unchecked_indices = [
+                    i for i, f in enumerate(uploaded_files) 
+                    if not st.session_state.get(f"ai_result_{i}_{f.name}", "")
+                ]
+                if not unchecked_indices:
+                    st.info("ℹ️ Барлық жүктелген жұмыстар тексеріліп қойған.")
+                else:
+                    current_balance = get_user_credits(current_user)
+                    needed_credits = float(len(unchecked_indices))
+                    if not is_admin and current_balance < needed_credits:
+                        st.error(f"❌ Барлық {len(unchecked_indices)} жұмысты тексеру үшін {int(needed_credits)} кредит қажет (Сізде: {int(current_balance)} кредит).")
+                    else:
+                        progress_bar = st.progress(0)
+                        status_text = st.empty()
+                        for step_num, idx in enumerate(unchecked_indices):
+                            f = uploaded_files[idx]
+                            st_name_preview = st.session_state.get(f"name_input_{idx}_{f.name}", f"Жұмыс №{idx+1}").strip() or f"Жұмыс №{idx+1}"
+                            status_text.info(f"⏳ Тексерілуде ({step_num+1}/{len(unchecked_indices)}): **{st_name_preview}**...")
+                            try:
+                                ai_resp, sc = evaluate_single_work(client, f, max_score)
+                                st.session_state[f"ai_result_{idx}_{f.name}"] = ai_resp
+                                st.session_state[f"exp_text_{idx}_{f.name}"] = ai_resp
+                                st.session_state[f"score_{idx}_{f.name}"] = sc
+                                if not is_admin:
+                                    deduct_credit(current_user, amount=1.0)
+                            except Exception as e:
+                                st.error(f"Қате ({f.name}): {e}")
+                            progress_bar.progress((step_num + 1) / len(unchecked_indices))
+                        status_text.success("✅ Барлық жұмыстар сәтті тексерілді!")
+                        st.rerun()
+
+        with bulk_col2:
+            if st.button("💾 Барлығын бірден сақтау", use_container_width=True):
+                missing_names = []
+                saved_count = 0
+                for idx, f in enumerate(uploaded_files):
+                    st_name = st.session_state.get(f"name_input_{idx}_{f.name}", "").strip()
+                    if not st_name:
+                        missing_names.append(f"Жұмыс №{idx+1} ({f.name})")
+                
+                if missing_names:
+                    st.error(f"❌ Келесі жұмыстарға оқушы аты-жөні енгізілмеген: {', '.join(missing_names)}")
+                else:
+                    for idx, f in enumerate(uploaded_files):
+                        st_name = st.session_state.get(f"name_input_{idx}_{f.name}", "").strip()
+                        sc = float(st.session_state.get(f"score_{idx}_{f.name}", 0.0))
+                        exp_txt = st.session_state.get(f"exp_text_{idx}_{f.name}", "").strip()
+                        full_feedback = f"Кері байланыс:\n{exp_txt}"
+                        save_pending_result(
+                            st_name,
+                            "[Автоматты тексеру] Оқушы жұмысы",
+                            "ҚР стандарттары бойынша критериалды бағалау",
+                            sc,
+                            float(max_score),
+                            full_feedback
+                        )
+                        saved_count += 1
+                    st.success(f"✅ Барлығы {saved_count} оқушының нәтижесі сәтті сақталды! Енді «Мұғалім бекітуі» бөлімінен бекіте аласыз.")
+
+        st.markdown("---")
+
+        # --- ӘР ОҚУШЫНЫҢ ЖЕКЕ КАРТОЧКАСЫ ---
         for idx, uploaded_file in enumerate(uploaded_files):
             input_key = f"name_input_{idx}_{uploaded_file.name}"
             current_display_name = st.session_state.get(input_key, "").strip()
-            expander_title = f"📁 Жұмыс №{idx+1}: {current_display_name if current_display_name else uploaded_file.name}"
+            ai_res_key = f"ai_result_{idx}_{uploaded_file.name}"
+            is_checked = bool(st.session_state.get(ai_res_key, ""))
+            status_badge = "✅ Тексерілді" if is_checked else "⏳ Күтілуде"
+            
+            expander_title = f"📁 Жұмыс №{idx+1}: {current_display_name if current_display_name else uploaded_file.name} — [{status_badge}]"
             
             with st.expander(expander_title, expanded=True):
                 col_img, col_form = st.columns([1, 1])
@@ -220,18 +344,16 @@ elif menu == "Жұмысты тексеру":
                         except Exception:
                             st.error("Суретті ашу мүмкін болмады.")
                 with col_form:
-                    # Мұғалім оқушы аты-жөнін қолмен енгізуі үшін арнайы өріс
                     st_code = st.text_input(
                         "👤 Оқушының аты-жөнін енгізіңіз *", 
                         placeholder="Мысалы: Асанов Алихан", 
                         key=input_key
                     )
                     
-                    ai_res_key = f"ai_result_{idx}_{uploaded_file.name}"
                     if ai_res_key not in st.session_state:
                         st.session_state[ai_res_key] = ""
 
-                    # ЖИ ТЕКСЕРУ БАТЫРМАСЫ
+                    # ЖЕКЕ ТЕКСЕРУ БАТЫРМАСЫ
                     if st.button("🟢 Автоматты тексеру", key=f"ai_btn_{idx}_{uploaded_file.name}"):
                         current_balance = get_user_credits(current_user)
                         
@@ -240,57 +362,10 @@ elif menu == "Жұмысты тексеру":
                         else:
                             with st.spinner("ЖИ ҚР білім стандартына сәйкес жұмысты толық талдап жатыр..."):
                                 try:
-                                    images_b64 = process_uploaded_file(uploaded_file)
-                                    
-                                    prompt_text = f"""
-Сен — Қазақстан Республикасының орта білім беру стандарты мен критериалды бағалау жүйесін жеттік білетін тәжірибелі сарапшы-ұстазсың. №399, №125 және №348 бұйрықтардың талаптары мен дескрипторларды қатаң басшылыққа ал.
-Суреттегі оқушының жазбаша жұмысын өте мұқият оқып шық. Жұмыстағы барлық тапсырмалар мен тармақтарды анықтап, жеке-жеке тексер.
-
-ТАРМАҚТАРДЫ БЕЛГІЛЕУ ЕРЕЖЕСІ:
-1. Жұмыста қалай жазылған болса, сол форматты қолдан: қазақша әріптер (а, ә, б, в, г) немесе латын әріптері (a, b, c, d).
-2. Әрбір тапсырманың тақырыбын немесе оқу мақсатын (егер бетте жазылған болса немесе мазмұнынан анықталса) қысқаша көрсетіп, сәйкес белгі қой:
-   - 🟢 [Дұрыс] — жауап толық дұрыс болса.
-   - 🔴 [Қате] — жауап қате немесе орындалмаған болса.
-   - 🟡 [Жартылай] — жартылай дұрыс болса.
-3. Әр бағалаудың себебін қысқаша түсіндіріп жаз.
-4. Соңында міндетті түрде мына форматта жаз:
-   Жиынтық балл: X/{int(max_score)}
-
-ФОРМАТ ТАЛАБЫ:
-1. Барлық тапсырмаларды жеке жолдармен сипаттап шық.
-2. Соңында 'Жиынтық балл: X/{int(max_score)}' түрінде көрсет.
-"""
-                                    messages_content = [{"type": "text", "text": prompt_text}]
-                                    for img_b64 in images_b64:
-                                        messages_content.append({
-                                            "type": "image_url",
-                                            "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}
-                                        })
-
-                                    response = client.chat.completions.create(
-                                        model="gpt-4o",
-                                        messages=[
-                                            {"role": "system", "content": "Сіз ҚР білім беру стандартына сай оқушы жұмыстарын тексеретін ұстазсыз."},
-                                            {"role": "user", "content": messages_content}
-                                        ],
-                                        max_tokens=2500,
-                                        temperature=0.1
-                                    )
-                                    
-                                    full_ai_resp = response.choices[0].message.content
-                                    full_ai_resp = re.sub(r'\[ОҚУШЫ_АТЫ\].*?\[/ОҚУШЫ_АТЫ\]', '', full_ai_resp).strip()
-                                    
-                                    score_match = re.search(r'Жиынтық балл:\s*([\d\.]+)', full_ai_resp, re.IGNORECASE)
-                                    if score_match:
-                                        try:
-                                            extracted_score = float(score_match.group(1))
-                                            if extracted_score <= float(max_score):
-                                                st.session_state[f"score_{idx}_{uploaded_file.name}"] = extracted_score
-                                        except:
-                                            pass
-
+                                    full_ai_resp, extracted_score = evaluate_single_work(client, uploaded_file, max_score)
                                     st.session_state[ai_res_key] = full_ai_resp
                                     st.session_state[f"exp_text_{idx}_{uploaded_file.name}"] = full_ai_resp
+                                    st.session_state[f"score_{idx}_{uploaded_file.name}"] = extracted_score
                                     
                                     if not is_admin:
                                         deduct_credit(current_user, amount=1.0)
@@ -314,7 +389,7 @@ elif menu == "Жұмысты тексеру":
                             elif line.strip():
                                 st.write(line)
                     else:
-                        st.info("ℹ️ Алдымен оқушының аты-жөнін жазып, **🟢 Автоматты тексеру** батырмасын басыңыз.")
+                        st.info("ℹ️ Оқушының аты-жөнін жазып, **🟢 Автоматты тексеру** немесе жоғарыдағы **⚡ Барлық жұмысты бірден тексеру** батырмасын басыңыз.")
 
                     score_key = f"score_{idx}_{uploaded_file.name}"
                     prop_score = st.number_input(
@@ -343,7 +418,7 @@ elif menu == "Жұмысты тексеру":
                             full_feedback = f"Кері байланыс:\n{explanation.strip()}"
                             save_pending_result(
                                 current_st_name, 
-                                f"[Автоматты тексеру] Оқушы жұмысы", 
+                                "[Автоматты тексеру] Оқушы жұмысы", 
                                 "ҚР стандарттары бойынша критериалды бағалау", 
                                 float(prop_score), 
                                 float(max_score), 
@@ -358,13 +433,24 @@ elif menu == "Мұғалім бекітуі":
     pending = get_pending_results()
     if not pending:
         st.info("Бекітуді күтіп тұрған жұмыс жоқ.")
-    for item in pending:
-        with st.expander(f"Жұмыс: {item['student_code']} — {item['proposed_score']} балл"):
-            score = st.number_input("Бекітілетін ұпай", value=float(item['proposed_score']), key="app_" + item["id"])
-            comment = st.text_area("Ескертпе (міндетті емес)", placeholder="Қажет болса, қосымша пікір қалдырыңыз...", key="com_" + item["id"])
-            if st.button("Бекіту", key="btn_" + item["id"]):
-                approve_result(item["id"], score, current_user, comment)
-                st.rerun()
+    else:
+        st.write(f"Бекітуді күтіп тұрған жұмыстар саны: **{len(pending)}**")
+        if st.button("✅ Барлығын бірден бекіту"):
+            for item in pending:
+                sc_val = float(st.session_state.get("app_" + str(item["id"]), item["proposed_score"]))
+                com_val = st.session_state.get("com_" + str(item["id"]), "")
+                approve_result(item["id"], sc_val, current_user, com_val)
+            st.success("✅ Барлық жұмыстар сәтті бекітілді!")
+            st.rerun()
+            
+        st.markdown("---")
+        for item in pending:
+            with st.expander(f"Жұмыс: {item['student_code']} — {item['proposed_score']} балл", expanded=True):
+                score = st.number_input("Бекітілетін ұпай", value=float(item['proposed_score']), key="app_" + str(item["id"]))
+                comment = st.text_area("Ескертпе (міндетті емес)", placeholder="Қажет болса, қосымша пікір қалдырыңыз...", key="com_" + str(item["id"]))
+                if st.button("Бекіту", key="btn_" + str(item["id"])):
+                    approve_result(item["id"], score, current_user, comment)
+                    st.rerun()
 
 elif menu == "Нәтижелер":
     st.subheader("Мұғалім бекіткен нәтижелер")
@@ -383,7 +469,6 @@ elif menu == "Статистика":
     else:
         df_stat = pd.DataFrame(rows)
         
-        # Егер дерекқордан tuple/list келсе (бағандар 0, 1, 2... деп нөмірленген болса)
         if all(isinstance(c, int) for c in df_stat.columns):
             num_cols = []
             str_cols = []
@@ -394,10 +479,8 @@ elif menu == "Статистика":
                 else:
                     str_cols.append(c)
             
-            # Оқушы аты-жөні бағанын табу (SQLite кестесінде 1-баған — student_code)
             student_col = 1 if 1 in df_stat.columns else (str_cols[0] if str_cols else 0)
             
-            # Ұпай мен максималды балл бағандарын анықтау
             if len(num_cols) >= 3:
                 score_col = num_cols[-1]
                 max_col = num_cols[1]
@@ -411,10 +494,8 @@ elif menu == "Статистика":
                 st.error("Кестеден сандық ұпай деректері табылмады.")
                 st.stop()
                 
-            # Ең ұзын мәтінді бағанды кері байланыс (feedback) ретінде алу
             fb_col = max(str_cols, key=lambda c: df_stat[c].astype(str).str.len().mean()) if str_cols else None
             
-            # Баған атауларын оқушы аты-жөнімен реттеу
             rename_map = {student_col: "Оқушы аты-жөні", score_col: "Бекітілген ұпай"}
             if max_col is not None:
                 rename_map[max_col] = "Максималды балл"
@@ -427,7 +508,6 @@ elif menu == "Статистика":
             max_col_name = "Максималды балл" if max_col is not None else None
             fb_col_name = "Кері байланыс" if (fb_col is not None and fb_col != student_col) else None
         else:
-            # Егер сөздік (dict) түрінде келсе
             score_col = next((c for c in ['teacher_score', 'final_score', 'approved_score', 'score', 'proposed_score'] if c in df_stat.columns), None)
             student_col = next((c for c in ['student_code', 'student_name', 'student'] if c in df_stat.columns), None)
             max_col_name = 'max_score' if 'max_score' in df_stat.columns else None
@@ -443,7 +523,6 @@ elif menu == "Статистика":
 
         df_stat[score_col] = pd.to_numeric(df_stat[score_col], errors='coerce').fillna(0.0)
         
-        # Негізгі көрсеткіштерді есептеу
         total_students = len(df_stat)
         avg_score = df_stat[score_col].mean()
         
@@ -455,14 +534,12 @@ elif menu == "Статистика":
             max_possible = 10.0
             df_stat['Пайыздық көрсеткіш (%)'] = (df_stat[score_col] / max_possible) * 100
 
-        # ҚР стандарты бойынша бағалау шкаласы (40%+ үлгерім, 65%+ сапа)
         passing_count = len(df_stat[df_stat['Пайыздық көрсеткіш (%)'] >= 40])
         quality_count = len(df_stat[df_stat['Пайыздық көрсеткіш (%)'] >= 65])
             
         passing_rate = (passing_count / total_students) * 100
         quality_rate = (quality_count / total_students) * 100
 
-        # Метрикалар панелі
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Оқушы саны", f"{total_students}")
         col2.metric("Орташа балл", f"{avg_score:.1f} / {max_possible:.0f}")
@@ -473,12 +550,10 @@ elif menu == "Статистика":
         st.write("### 📈 Оқушылардың аты-жөні бойынша ұпайлары")
         if student_col and student_col in df_stat.columns:
             df_stat[student_col] = df_stat[student_col].astype(str)
-            # Бірдей аты-жөн қайталанса, графикте қате шықпас үшін реттік нөмір қосу
             if df_stat[student_col].duplicated().any():
                 df_stat[student_col] = df_stat[student_col] + " (" + (df_stat.groupby(student_col).cumcount() + 1).astype(str) + ")"
             st.bar_chart(df_stat.set_index(student_col)[score_col])
             
-            # Оқушылардың аты-жөні мен ұпайларының жиынтық кестесі
             display_cols = [student_col, score_col]
             if max_col_name:
                 display_cols.append(max_col_name)
