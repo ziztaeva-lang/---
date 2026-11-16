@@ -204,7 +204,11 @@ elif menu == "Жұмысты тексеру":
     if uploaded_files:
         st.success(f"Барлығы {len(uploaded_files)} файл жүктелді.")
         for idx, uploaded_file in enumerate(uploaded_files):
-            with st.expander(f"📁 Жұмыс №{idx+1}: {uploaded_file.name}"):
+            input_key = f"name_input_{idx}_{uploaded_file.name}"
+            current_display_name = st.session_state.get(input_key, "").strip()
+            expander_title = f"📁 Жұмыс №{idx+1}: {current_display_name if current_display_name else uploaded_file.name}"
+            
+            with st.expander(expander_title, expanded=True):
                 col_img, col_form = st.columns([1, 1])
                 with col_img:
                     if uploaded_file.name.lower().endswith('.pdf'):
@@ -216,18 +220,19 @@ elif menu == "Жұмысты тексеру":
                         except Exception:
                             st.error("Суретті ашу мүмкін болмады.")
                 with col_form:
-                    student_name_key = f"student_name_{idx}"
-                    if student_name_key not in st.session_state:
-                        st.session_state[student_name_key] = f"Оқушы-0{idx+1}"
-
-                    st_code = st.text_input("Оқушы аты-жөні", value=st.session_state[student_name_key], key=f"name_input_{idx}")
+                    # Мұғалім оқушы аты-жөнін қолмен енгізуі үшін арнайы өріс
+                    st_code = st.text_input(
+                        "👤 Оқушының аты-жөнін енгізіңіз *", 
+                        placeholder="Мысалы: Асанов Алихан", 
+                        key=input_key
+                    )
                     
-                    ai_res_key = f"ai_result_{idx}"
+                    ai_res_key = f"ai_result_{idx}_{uploaded_file.name}"
                     if ai_res_key not in st.session_state:
                         st.session_state[ai_res_key] = ""
 
                     # ЖИ ТЕКСЕРУ БАТЫРМАСЫ
-                    if st.button("🟢 Автоматты тексеру", key=f"ai_btn_{idx}"):
+                    if st.button("🟢 Автоматты тексеру", key=f"ai_btn_{idx}_{uploaded_file.name}"):
                         current_balance = get_user_credits(current_user)
                         
                         if not is_admin and current_balance < 1.0:
@@ -252,10 +257,8 @@ elif menu == "Жұмысты тексеру":
    Жиынтық балл: X/{int(max_score)}
 
 ФОРМАТ ТАЛАБЫ:
-1. Оқушының аты-жөнін жұмыс бетінен тауып жаз:
-   [ОҚУШЫ_АТЫ] Аты Жөні [/ОҚУШЫ_АТЫ] (егер табылмаса "Белгісіз оқушы").
-2. Барлық тапсырмаларды жеке жолдармен сипаттап шық.
-3. Соңында 'Жиынтық балл: X/{int(max_score)}' түрінде көрсет.
+1. Барлық тапсырмаларды жеке жолдармен сипаттап шық.
+2. Соңында 'Жиынтық балл: X/{int(max_score)}' түрінде көрсет.
 """
                                     messages_content = [{"type": "text", "text": prompt_text}]
                                     for img_b64 in images_b64:
@@ -275,25 +278,19 @@ elif menu == "Жұмысты тексеру":
                                     )
                                     
                                     full_ai_resp = response.choices[0].message.content
-                                    
-                                    name_match = re.search(r'\[ОҚУШЫ_АТЫ\](.*?)\[/ОҚУШЫ_АТЫ\]', full_ai_resp, re.DOTALL)
-                                    if name_match:
-                                        found_name = name_match.group(1).strip()
-                                        if found_name and "Белгісіз" not in found_name:
-                                            st.session_state[student_name_key] = found_name
-                                        full_ai_resp = re.sub(r'\[ОҚУШЫ_АТЫ\].*?\[/ОҚУШЫ_АТЫ\]', '', full_ai_resp).strip()
+                                    full_ai_resp = re.sub(r'\[ОҚУШЫ_АТЫ\].*?\[/ОҚУШЫ_АТЫ\]', '', full_ai_resp).strip()
                                     
                                     score_match = re.search(r'Жиынтық балл:\s*([\d\.]+)', full_ai_resp, re.IGNORECASE)
                                     if score_match:
                                         try:
                                             extracted_score = float(score_match.group(1))
                                             if extracted_score <= float(max_score):
-                                                st.session_state[f"score_{idx}"] = extracted_score
+                                                st.session_state[f"score_{idx}_{uploaded_file.name}"] = extracted_score
                                         except:
                                             pass
 
                                     st.session_state[ai_res_key] = full_ai_resp
-                                    st.session_state[f"exp_text_{idx}"] = full_ai_resp
+                                    st.session_state[f"exp_text_{idx}_{uploaded_file.name}"] = full_ai_resp
                                     
                                     if not is_admin:
                                         deduct_credit(current_user, amount=1.0)
@@ -317,18 +314,19 @@ elif menu == "Жұмысты тексеру":
                             elif line.strip():
                                 st.write(line)
                     else:
-                        st.info("ℹ️ Тексеру үшін жоғарыдағы **🟢 Автоматты тексеру** батырмасын басыңыз.")
+                        st.info("ℹ️ Алдымен оқушының аты-жөнін жазып, **🟢 Автоматты тексеру** батырмасын басыңыз.")
 
+                    score_key = f"score_{idx}_{uploaded_file.name}"
                     prop_score = st.number_input(
                         "Жалпы жинаған ұпай саны", 
                         min_value=0.0, 
                         max_value=float(max_score), 
-                        value=st.session_state.get(f"score_{idx}", 0.0), 
+                        value=st.session_state.get(score_key, 0.0), 
                         step=0.5, 
-                        key=f"score_{idx}"
+                        key=score_key
                     )
                     
-                    exp_key = f"exp_text_{idx}"
+                    exp_key = f"exp_text_{idx}_{uploaded_file.name}"
                     if exp_key not in st.session_state:
                         st.session_state[exp_key] = current_ai_text
 
@@ -339,8 +337,8 @@ elif menu == "Жұмысты тексеру":
                         key=exp_key
                     )
                     
-                    if st.button("💾 Нәтижені сақтау", key=f"save_btn_{idx}"):
-                        current_st_name = st_code.strip() if st_code.strip() else st.session_state[student_name_key]
+                    if st.button("💾 Нәтижені сақтау", key=f"save_btn_{idx}_{uploaded_file.name}"):
+                        current_st_name = st_code.strip()
                         if current_st_name:
                             full_feedback = f"Кері байланыс:\n{explanation.strip()}"
                             save_pending_result(
@@ -351,9 +349,9 @@ elif menu == "Жұмысты тексеру":
                                 float(max_score), 
                                 full_feedback
                             )
-                            st.success("✅ Нәтиже сәтті сақталды!")
+                            st.success(f"✅ {current_st_name} нәтижесі сәтті сақталды!")
                         else:
-                            st.error("❌ Оқушы аты-жөнін енгізіңіз!")
+                            st.error("❌ Сақтау үшін жоғарыдағы өріске оқушының аты-жөнін міндетті түрде енгізіңіз!")
 
 elif menu == "Мұғалім бекітуі":
     st.subheader("Мұғалімнің қорытынды бағасын бекіту")
@@ -396,7 +394,7 @@ elif menu == "Статистика":
                 else:
                     str_cols.append(c)
             
-            # Оқушы аты-жөні бағанын табу (әдетте 1-баған)
+            # Оқушы аты-жөні бағанын табу (SQLite кестесінде 1-баған — student_code)
             student_col = 1 if 1 in df_stat.columns else (str_cols[0] if str_cols else 0)
             
             # Ұпай мен максималды балл бағандарын анықтау
@@ -416,7 +414,7 @@ elif menu == "Статистика":
             # Ең ұзын мәтінді бағанды кері байланыс (feedback) ретінде алу
             fb_col = max(str_cols, key=lambda c: df_stat[c].astype(str).str.len().mean()) if str_cols else None
             
-            # Excel-ге әдемі шығуы үшін баған атауларын реттеу
+            # Баған атауларын оқушы аты-жөнімен реттеу
             rename_map = {student_col: "Оқушы аты-жөні", score_col: "Бекітілген ұпай"}
             if max_col is not None:
                 rename_map[max_col] = "Максималды балл"
@@ -434,6 +432,10 @@ elif menu == "Статистика":
             student_col = next((c for c in ['student_code', 'student_name', 'student'] if c in df_stat.columns), None)
             max_col_name = 'max_score' if 'max_score' in df_stat.columns else None
             fb_col_name = next((c for c in ['feedback', 'explanation', 'rubric', 'teacher_comment'] if c in df_stat.columns), None)
+
+            if student_col:
+                df_stat = df_stat.rename(columns={student_col: "Оқушы аты-жөні"})
+                student_col = "Оқушы аты-жөні"
 
         if not score_col or score_col not in df_stat.columns:
             st.error("Кестеден ұпай бағаны табылмады.")
@@ -468,9 +470,20 @@ elif menu == "Статистика":
         col4.metric("Сапа пайызы", f"{quality_rate:.1f}%")
 
         st.markdown("---")
-        st.write("### 📈 Оқушылардың ұпайларының графигі")
+        st.write("### 📈 Оқушылардың аты-жөні бойынша ұпайлары")
         if student_col and student_col in df_stat.columns:
+            df_stat[student_col] = df_stat[student_col].astype(str)
+            # Бірдей аты-жөн қайталанса, графикте қате шықпас үшін реттік нөмір қосу
+            if df_stat[student_col].duplicated().any():
+                df_stat[student_col] = df_stat[student_col] + " (" + (df_stat.groupby(student_col).cumcount() + 1).astype(str) + ")"
             st.bar_chart(df_stat.set_index(student_col)[score_col])
+            
+            # Оқушылардың аты-жөні мен ұпайларының жиынтық кестесі
+            display_cols = [student_col, score_col]
+            if max_col_name:
+                display_cols.append(max_col_name)
+            display_cols.append('Пайыздық көрсеткіш (%)')
+            st.dataframe(df_stat[display_cols], use_container_width=True)
         else:
             st.bar_chart(df_stat[score_col])
 
@@ -484,7 +497,6 @@ elif menu == "Статистика":
         if st.button("🤖 Қол жеткізген және қиындық туғызған мақсаттарды талдау"):
             with st.spinner("ЖИ барлық оқушылардың қателері мен жетістіктерін қорытындылап жатыр..."):
                 try:
-                    # Барлық оқушылардың кері байланыс деректерін жинақтау
                     feedback_records = []
                     for idx_r, r in df_stat.iterrows():
                         st_name = r.get(student_col, f'Оқушы-{idx_r+1}') if student_col else f'Оқушы-{idx_r+1}'
@@ -537,7 +549,6 @@ elif menu == "Статистика":
         st.markdown("---")
         st.write("### 📥 Есепті жүктеп алу")
         
-        # Excel файлына экспорттау (Статистика + Педагогикалық талдау жеке парақта)
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             df_stat.to_excel(writer, index=False, sheet_name='Оқушылар_нәтижесі')
