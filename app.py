@@ -228,25 +228,24 @@ elif menu == "Жұмысты тексеру":
                                     images_b64 = process_uploaded_file(uploaded_file)
                                     
                                     prompt_text = f"""
-Сен — Қазақстан Республикасының орта білім беру стандарты мен критериалды бағалау жүйесін жеттік білетін тәжірибелі сарапшы-ұстазсың. 
-Суреттегі оқушының жазбаша жұмысын өте мұқият оқып шық. Жұмыстағы барлық тапсырмалар мен тармақтарды (1-тапсырма, 2-тапсырма т.б.) анықтап, жеке-жеке тексер.
+Сен — Қазақстан Республикасының орта білім беру стандарты мен критериалды бағалау жүйесін жеттік білетін тәжірибелі сарапшы-ұстазсың. №399, №125 және №348 бұйрықтардың талаптары мен дескрипторларды қатаң басшылыққа ал.
+Суреттегі оқушының жазбаша жұмысын өте мұқият оқып шық. Жұмыстағы барлық тапсырмалар мен тармақтарды анықтап, жеке-жеке тексер.
 
 ТАРМАҚТАРДЫ БЕЛГІЛЕУ ЕРЕЖЕСІ:
-1. Жұмыста қалай жазылған болса, сол форматты қолдан: қазақша әріптер (а, ә, б, в, г) немесе латын әріптері (a, b, c, d) — жұмыста қалай көрсетілсе, дәл сол сәйкестікпен белгіле.
-2. Әрбір тапсырманы және оның тармақтарын жеке тізбектеп көрсет.
-3. Әр тармаққа міндетті түрде мына белгілердің бірін қой:
+1. Жұмыста қалай жазылған болса, сол форматты қолдан: қазақша әріптер (а, ә, б, в, г) немесе латын әріптері (a, b, c, d).
+2. Әрбір тапсырмаға сәйкес белгі қой:
    - 🟢 [Дұрыс] — жауап толық дұрыс болса.
    - 🔴 [Қате] — жауап қате немесе орындалмаған болса.
    - 🟡 [Жартылай] — жартылай дұрыс болса.
-4. Әр бағалаудың себебін қысқаша түсіндіріп жаз.
-5. Барлық жиналған ұпайды есептеп, соңында міндетті түрде мына форматта жаз:
+3. Әр бағалаудың себебін қысқаша түсіндіріп жаз.
+4. Соңында міндетті түрде мына форматта жаз:
    Жиынтық балл: X/{int(max_score)}
 
 ФОРМАТ ТАЛАБЫ:
 1. Оқушының аты-жөнін жұмыс бетінен тауып жаз:
    [ОҚУШЫ_АТЫ] Аты Жөні [/ОҚУШЫ_АТЫ] (егер табылмаса "Белгісіз оқушы").
-2. Барлық тапсырмаларды жұмыстағыдай әріптермен (а, ә, б, в немесе a, b, c, d) жеке жолдармен сипаттап шық.
-3. Соңында міндетті түрде 'Жиынтық балл: X/{int(max_score)}' түрінде көрсет.
+2. Барлық тапсырмаларды жеке жолдармен сипаттап шық.
+3. Соңында 'Жиынтық балл: X/{int(max_score)}' түрінде көрсет.
 """
                                     messages_content = [{"type": "text", "text": prompt_text}]
                                     for img_b64 in images_b64:
@@ -258,7 +257,7 @@ elif menu == "Жұмысты тексеру":
                                     response = client.chat.completions.create(
                                         model="gpt-4o",
                                         messages=[
-                                            {"role": "system", "content": f"Сіз ҚР білім беру стандартына сай оқушы жұмыстарын қатаң әрі әділ тексеретін, тапсырма тармақтарын жұмыстағыдай (қазақша не латынша әріптермен) белгілейтін және қорытынды ұпайды {int(max_score)} баллдық шкаламен есептейтін мұғалімсіз."},
+                                            {"role": "system", "content": f"Сіз ҚР білім беру стандартына сай оқушы жұмыстарын тексеретін ұстазсыз."},
                                             {"role": "user", "content": messages_content}
                                         ],
                                         max_tokens=2500,
@@ -325,7 +324,7 @@ elif menu == "Жұмысты тексеру":
                         st.session_state[exp_key] = current_ai_text
 
                     explanation = st.text_area(
-                        "Толық кері байланыс мәтіні (Қажет болған жағдайда мұғалім өз пікірін қоса алады)", 
+                        "Толық кері байланыс мәтіні", 
                         value=st.session_state[exp_key], 
                         height=250, 
                         key=exp_key
@@ -370,13 +369,57 @@ elif menu == "Нәтижелер":
         st.dataframe(df_res)
 
 elif menu == "Статистика":
-    st.subheader("Статистика")
+    st.subheader("📊 Сыныптың статистикасы мен аналитикасы")
     rows = get_approved_results()
     if not rows:
-        st.info("Әзірге статистика жоқ.")
+        st.info("Әзірге бекітілген нәтижелер жоқ. Статистика шығару үшін жұмыстарды тексеріп, бекітіңіз.")
     else:
         df_stat = pd.DataFrame(rows)
-        st.bar_chart(df_stat.set_index('student_code')[['teacher_score']])
+        
+        # Негізгі көрсеткіштерді есептеу
+        total_students = len(df_stat)
+        avg_score = df_stat['teacher_score'].mean()
+        max_possible = df_stat['max_score'].mean() if 'max_score' in df_stat.columns else 10.0
+        
+        # Сапа мен үлгерім пайызын есептеу (Мысалы: 50%-дан жоғары алғандар үлгерім, 70%-дан жоғары алғандар сапа)
+        if 'max_score' in df_stat.columns and max_possible > 0:
+            df_stat['percentage'] = (df_stat['teacher_score'] / df_stat['max_score']) * 100
+            passing_count = len(df_stat[df_stat['percentage'] >= 50])
+            quality_count = len(df_stat[df_stat['percentage'] >= 65])
+        else:
+            passing_count = len(df_stat[df_stat['teacher_score'] >= (max_possible * 0.5)])
+            quality_count = len(df_stat[df_stat['teacher_score'] >= (max_possible * 0.7)])
+            
+        passing_rate = (passing_count / total_students) * 100
+        quality_rate = (quality_count / total_students) * 100
+
+        # Метрикалар панелі
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Оқушы саны", f"{total_students}")
+        col2.metric("Орташа балл", f"{avg_score:.1f}")
+        col3.metric("Үлгерім пайызы", f"{passing_rate:.1f}%")
+        col4.metric("Сапа пайызы", f"{quality_rate:.1f}%")
+
+        st.markdown("---")
+        st.write("### 📈 Оқушылардың ұпайларының графигі")
+        if 'student_code' in df_stat.columns and 'teacher_score' in df_stat.columns:
+            st.bar_chart(df_stat.set_index('student_code')['teacher_score'])
+
+        st.markdown("---")
+        st.write("### 📥 Есепті жүктеп алу")
+        
+        # Excel файлына экспорттау
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df_stat.to_excel(writer, index=False, sheet_name='Статистика')
+        excel_data = output.getvalue()
+
+        st.download_button(
+            label="📊 Excel форматында жүктеу (.xlsx)",
+            data=excel_data,
+            file_name="SmartTest_Cynip_Statistikasy.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
 elif menu == "Балансты толтыру":
     st.subheader("💳 Кредит сатып алу және балансты толтыру")
