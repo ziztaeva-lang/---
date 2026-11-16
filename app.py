@@ -363,7 +363,7 @@ elif menu == "Мұғалім бекітуі":
     for item in pending:
         with st.expander(f"Жұмыс: {item['student_code']} — {item['proposed_score']} балл"):
             score = st.number_input("Бекітілетін ұпай", value=float(item['proposed_score']), key="app_" + item["id"])
-            comment = st.text_area("Ескертпе", key="com_" + item["id"])
+            comment = st.text_area("Ескертпе (міндетті емес)", placeholder="Қажет болса, қосымша пікір қалдырыңыз...", key="com_" + item["id"])
             if st.button("Бекіту", key="btn_" + item["id"]):
                 approve_result(item["id"], score, current_user, comment)
                 st.rerun()
