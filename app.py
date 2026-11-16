@@ -385,12 +385,58 @@ elif menu == "Статистика":
     else:
         df_stat = pd.DataFrame(rows)
         
-        # Ұпай мен оқушы бағандарын автоматты түрде анықтау (KeyError алдын алу)
-        score_col = next((c for c in ['teacher_score', 'final_score', 'approved_score', 'score', 'proposed_score'] if c in df_stat.columns), None)
-        student_col = next((c for c in ['student_code', 'student_name', 'student'] if c in df_stat.columns), None)
-        
-        if not score_col:
-            st.error(f"Кестеден ұпай бағаны табылмады. Қолжетімді бағандар: {list(df_stat.columns)}")
+        # Егер дерекқордан tuple/list келсе (бағандар 0, 1, 2... деп нөмірленген болса)
+        if all(isinstance(c, int) for c in df_stat.columns):
+            num_cols = []
+            str_cols = []
+            for c in df_stat.columns:
+                converted = pd.to_numeric(df_stat[c], errors='coerce')
+                if converted.notna().sum() == len(df_stat) and c != 0:
+                    num_cols.append(c)
+                else:
+                    str_cols.append(c)
+            
+            # Оқушы аты-жөні бағанын табу (әдетте 1-баған)
+            student_col = 1 if 1 in df_stat.columns else (str_cols[0] if str_cols else 0)
+            
+            # Ұпай мен максималды балл бағандарын анықтау
+            if len(num_cols) >= 3:
+                score_col = num_cols[-1]
+                max_col = num_cols[1]
+            elif len(num_cols) == 2:
+                score_col = num_cols[0]
+                max_col = num_cols[1]
+            elif len(num_cols) == 1:
+                score_col = num_cols[0]
+                max_col = None
+            else:
+                st.error("Кестеден сандық ұпай деректері табылмады.")
+                st.stop()
+                
+            # Ең ұзын мәтінді бағанды кері байланыс (feedback) ретінде алу
+            fb_col = max(str_cols, key=lambda c: df_stat[c].astype(str).str.len().mean()) if str_cols else None
+            
+            # Excel-ге әдемі шығуы үшін баған атауларын реттеу
+            rename_map = {student_col: "Оқушы аты-жөні", score_col: "Бекітілген ұпай"}
+            if max_col is not None:
+                rename_map[max_col] = "Максималды балл"
+            if fb_col is not None and fb_col != student_col:
+                rename_map[fb_col] = "Кері байланыс"
+                
+            df_stat = df_stat.rename(columns=rename_map)
+            student_col = "Оқушы аты-жөні"
+            score_col = "Бекітілген ұпай"
+            max_col_name = "Максималды балл" if max_col is not None else None
+            fb_col_name = "Кері байланыс" if (fb_col is not None and fb_col != student_col) else None
+        else:
+            # Егер сөздік (dict) түрінде келсе
+            score_col = next((c for c in ['teacher_score', 'final_score', 'approved_score', 'score', 'proposed_score'] if c in df_stat.columns), None)
+            student_col = next((c for c in ['student_code', 'student_name', 'student'] if c in df_stat.columns), None)
+            max_col_name = 'max_score' if 'max_score' in df_stat.columns else None
+            fb_col_name = next((c for c in ['feedback', 'explanation', 'rubric', 'teacher_comment'] if c in df_stat.columns), None)
+
+        if not score_col or score_col not in df_stat.columns:
+            st.error("Кестеден ұпай бағаны табылмады.")
             st.stop()
 
         df_stat[score_col] = pd.to_numeric(df_stat[score_col], errors='coerce').fillna(0.0)
@@ -399,17 +445,17 @@ elif menu == "Статистика":
         total_students = len(df_stat)
         avg_score = df_stat[score_col].mean()
         
-        if 'max_score' in df_stat.columns:
-            df_stat['max_score'] = pd.to_numeric(df_stat['max_score'], errors='coerce').fillna(10.0)
-            max_possible = df_stat['max_score'].mean()
-            df_stat['percentage'] = (df_stat[score_col] / df_stat['max_score'].replace(0, 10.0)) * 100
+        if max_col_name and max_col_name in df_stat.columns:
+            df_stat[max_col_name] = pd.to_numeric(df_stat[max_col_name], errors='coerce').fillna(10.0)
+            max_possible = df_stat[max_col_name].mean()
+            df_stat['Пайыздық көрсеткіш (%)'] = (df_stat[score_col] / df_stat[max_col_name].replace(0, 10.0)) * 100
         else:
             max_possible = 10.0
-            df_stat['percentage'] = (df_stat[score_col] / max_possible) * 100
+            df_stat['Пайыздық көрсеткіш (%)'] = (df_stat[score_col] / max_possible) * 100
 
         # ҚР стандарты бойынша бағалау шкаласы (40%+ үлгерім, 65%+ сапа)
-        passing_count = len(df_stat[df_stat['percentage'] >= 40])
-        quality_count = len(df_stat[df_stat['percentage'] >= 65])
+        passing_count = len(df_stat[df_stat['Пайыздық көрсеткіш (%)'] >= 40])
+        quality_count = len(df_stat[df_stat['Пайыздық көрсеткіш (%)'] >= 65])
             
         passing_rate = (passing_count / total_students) * 100
         quality_rate = (quality_count / total_students) * 100
@@ -423,7 +469,7 @@ elif menu == "Статистика":
 
         st.markdown("---")
         st.write("### 📈 Оқушылардың ұпайларының графигі")
-        if student_col:
+        if student_col and student_col in df_stat.columns:
             st.bar_chart(df_stat.set_index(student_col)[score_col])
         else:
             st.bar_chart(df_stat[score_col])
@@ -443,14 +489,8 @@ elif menu == "Статистика":
                     for idx_r, r in df_stat.iterrows():
                         st_name = r.get(student_col, f'Оқушы-{idx_r+1}') if student_col else f'Оқушы-{idx_r+1}'
                         sc = r.get(score_col, 0)
-                        mx = r.get('max_score', max_possible)
-                        fb = (
-                            r.get('feedback', '') 
-                            or r.get('explanation', '') 
-                            or r.get('rubric', '') 
-                            or r.get('teacher_comment', '') 
-                            or r.get('comment', '')
-                        )
+                        mx = r.get(max_col_name, max_possible) if max_col_name else max_possible
+                        fb = r.get(fb_col_name, '') if fb_col_name else ''
                         feedback_records.append(f"Оқушы: {st_name} | Балл: {sc}/{mx}\nТалдауы:\n{fb}\n---")
                     
                     combined_data = "\n".join(feedback_records)
