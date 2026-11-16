@@ -385,17 +385,29 @@ elif menu == "Статистика":
     else:
         df_stat = pd.DataFrame(rows)
         
+        # Ұпай мен оқушы бағандарын автоматты түрде анықтау (KeyError алдын алу)
+        score_col = next((c for c in ['teacher_score', 'final_score', 'approved_score', 'score', 'proposed_score'] if c in df_stat.columns), None)
+        student_col = next((c for c in ['student_code', 'student_name', 'student'] if c in df_stat.columns), None)
+        
+        if not score_col:
+            st.error(f"Кестеден ұпай бағаны табылмады. Қолжетімді бағандар: {list(df_stat.columns)}")
+            st.stop()
+
+        df_stat[score_col] = pd.to_numeric(df_stat[score_col], errors='coerce').fillna(0.0)
+        
         # Негізгі көрсеткіштерді есептеу
         total_students = len(df_stat)
-        avg_score = df_stat['teacher_score'].mean()
-        max_possible = df_stat['max_score'].mean() if 'max_score' in df_stat.columns else 10.0
+        avg_score = df_stat[score_col].mean()
         
-        # ҚР стандарты бойынша бағалау шкаласы (0-39%: 2, 40-64%: 3, 65-84%: 4, 85-100%: 5)
-        if 'max_score' in df_stat.columns and max_possible > 0:
-            df_stat['percentage'] = (df_stat['teacher_score'] / df_stat['max_score']) * 100
+        if 'max_score' in df_stat.columns:
+            df_stat['max_score'] = pd.to_numeric(df_stat['max_score'], errors='coerce').fillna(10.0)
+            max_possible = df_stat['max_score'].mean()
+            df_stat['percentage'] = (df_stat[score_col] / df_stat['max_score'].replace(0, 10.0)) * 100
         else:
-            df_stat['percentage'] = (df_stat['teacher_score'] / max_possible) * 100
+            max_possible = 10.0
+            df_stat['percentage'] = (df_stat[score_col] / max_possible) * 100
 
+        # ҚР стандарты бойынша бағалау шкаласы (40%+ үлгерім, 65%+ сапа)
         passing_count = len(df_stat[df_stat['percentage'] >= 40])
         quality_count = len(df_stat[df_stat['percentage'] >= 65])
             
@@ -411,8 +423,10 @@ elif menu == "Статистика":
 
         st.markdown("---")
         st.write("### 📈 Оқушылардың ұпайларының графигі")
-        if 'student_code' in df_stat.columns and 'teacher_score' in df_stat.columns:
-            st.bar_chart(df_stat.set_index('student_code')['teacher_score'])
+        if student_col:
+            st.bar_chart(df_stat.set_index(student_col)[score_col])
+        else:
+            st.bar_chart(df_stat[score_col])
 
         st.markdown("---")
         st.write("### 🧠 Оқу мақсаттары бойынша автоматты педагогикалық талдау")
@@ -426,11 +440,17 @@ elif menu == "Статистика":
                 try:
                     # Барлық оқушылардың кері байланыс деректерін жинақтау
                     feedback_records = []
-                    for _, r in df_stat.iterrows():
-                        st_name = r.get('student_code', 'Оқушы')
-                        sc = r.get('teacher_score', 0)
+                    for idx_r, r in df_stat.iterrows():
+                        st_name = r.get(student_col, f'Оқушы-{idx_r+1}') if student_col else f'Оқушы-{idx_r+1}'
+                        sc = r.get(score_col, 0)
                         mx = r.get('max_score', max_possible)
-                        fb = r.get('feedback', '') or r.get('rubric', '') or r.get('teacher_comment', '')
+                        fb = (
+                            r.get('feedback', '') 
+                            or r.get('explanation', '') 
+                            or r.get('rubric', '') 
+                            or r.get('teacher_comment', '') 
+                            or r.get('comment', '')
+                        )
                         feedback_records.append(f"Оқушы: {st_name} | Балл: {sc}/{mx}\nТалдауы:\n{fb}\n---")
                     
                     combined_data = "\n".join(feedback_records)
