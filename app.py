@@ -528,7 +528,6 @@ if "username" not in st.session_state:
     st.session_state.username = ""
 
 if not st.session_state.authenticated:
-    # Кіру бетіндегі 3 тілді ауыстырғыш түйме
     lang_col1, lang_col2 = st.columns([3, 1])
     with lang_col2:
         selected_login_lang = st.radio(
@@ -575,7 +574,6 @@ total_tenge = user_balance * price_per_credit
 user_role = get_user_role(current_user)
 is_admin = (user_role == "admin" or current_user.lower() in ["zoya", "admin"])
 
-# Бүйірлік панельдегі 3 тілді ауыстырғыш түйме
 st.sidebar.title("SmartTest")
 selected_sidebar_lang = st.sidebar.radio(
     t("lang_label"),
@@ -593,7 +591,6 @@ st.sidebar.markdown(f"👤 **{t('user_lbl')}:** {current_user}")
 st.sidebar.metric(label=t("balance_lbl"), value=f"{user_balance} {t('credit_unit')}", delta=f"{total_tenge:,.0f} ₸")
 st.sidebar.markdown("---")
 
-# Мәзір кілттері (тіл ауысқанда таңдалған бет жоғалып кетпеуі үшін)
 menu_keys = ["menu_home", "menu_check", "menu_approve", "menu_results", "menu_stats", "menu_billing"]
 if is_admin:
     menu_keys.append("menu_security")
@@ -633,7 +630,6 @@ elif selected_menu_key == "menu_check":
     if uploaded_files:
         st.success(t("uploaded_ok").format(len(uploaded_files)))
         
-        # --- ЖАППАЙ ТЕКСЕРУ ЖӘНЕ САҚТАУ БАТЫРМАЛАРЫ ---
         bulk_col1, bulk_col2 = st.columns(2)
         with bulk_col1:
             if st.button(t("bulk_check_btn"), use_container_width=True):
@@ -663,7 +659,7 @@ elif selected_menu_key == "menu_check":
                                 if not is_admin:
                                     deduct_credit(current_user, amount=1.0)
                             except Exception as e:
-                                st.error(f"Error ({f.name}): {e}")
+                                st.error(f"Қате ({f.name}): {e}")
                             progress_bar.progress((step_num + 1) / len(unchecked_indices))
                         status_text.success(t("bulk_check_done"))
                         st.rerun()
@@ -684,11 +680,11 @@ elif selected_menu_key == "menu_check":
                         st_name = st.session_state.get(f"name_input_{idx}_{f.name}", "").strip()
                         sc = float(st.session_state.get(f"score_{idx}_{f.name}", 0.0))
                         exp_txt = st.session_state.get(f"exp_text_{idx}_{f.name}", "").strip()
-                        full_feedback = f"Кері байланыс / Feedback:\n{exp_txt}"
+                        full_feedback = f"Кері байланыс:\n{exp_txt}"
                         save_pending_result(
                             st_name,
-                            "[SmartTest] Student Work",
-                            "RK Educational Standards Assessment",
+                            "[Автоматты тексеру] Оқушы жұмысы",
+                            "ҚР стандарттары бойынша критериалды бағалау",
                             sc,
                             float(max_score),
                             full_feedback
@@ -698,7 +694,6 @@ elif selected_menu_key == "menu_check":
 
         st.markdown("---")
 
-        # --- ӘР ОҚУШЫНЫҢ ЖЕКЕ КАРТОЧКАСЫ ---
         for idx, uploaded_file in enumerate(uploaded_files):
             input_key = f"name_input_{idx}_{uploaded_file.name}"
             current_display_name = st.session_state.get(input_key, "").strip()
@@ -729,7 +724,6 @@ elif selected_menu_key == "menu_check":
                     if ai_res_key not in st.session_state:
                         st.session_state[ai_res_key] = ""
 
-                    # ЖЕКЕ ТЕКСЕРУ БАТЫРМАСЫ
                     if st.button(t("single_check_btn"), key=f"ai_btn_{idx}_{uploaded_file.name}"):
                         current_balance = get_user_credits(current_user)
                         
@@ -748,7 +742,7 @@ elif selected_menu_key == "menu_check":
                                     st.success(t("single_check_ok"))
                                     st.rerun()
                                 except Exception as e:
-                                    st.error(f"Error: {e}")
+                                    st.error(f"Қате: {e}")
 
                     current_ai_text = st.session_state.get(ai_res_key, "")
                     
@@ -791,11 +785,11 @@ elif selected_menu_key == "menu_check":
                     if st.button(t("save_btn"), key=f"save_btn_{idx}_{uploaded_file.name}"):
                         current_st_name = st_code.strip()
                         if current_st_name:
-                            full_feedback = f"Кері байланыс / Feedback:\n{explanation.strip()}"
+                            full_feedback = f"Кері байланыс:\n{explanation.strip()}"
                             save_pending_result(
                                 current_st_name, 
-                                "[SmartTest] Student Work", 
-                                "RK Educational Standards Assessment", 
+                                "[Автоматты тексеру] Оқушы жұмысы", 
+                                "ҚР стандарттары бойынша критериалды бағалау", 
                                 float(prop_score), 
                                 float(max_score), 
                                 full_feedback
@@ -821,7 +815,7 @@ elif selected_menu_key == "menu_approve":
             
         st.markdown("---")
         for item in pending:
-            with st.expander(f"{item['student_code']} — {item['proposed_score']} pts", expanded=True):
+            with st.expander(f"{item['student_code']} — {item['proposed_score']} балл", expanded=True):
                 score = st.number_input(t("approve_score_lbl"), value=float(item['proposed_score']), key="app_" + str(item["id"]))
                 comment = st.text_area(t("comment_lbl"), placeholder=t("comment_ph"), key="com_" + str(item["id"]))
                 if st.button(t("approve_btn"), key="btn_" + str(item["id"])):
@@ -867,41 +861,52 @@ elif selected_menu_key == "menu_stats":
                 score_col = num_cols[0]
                 max_col = None
             else:
-                st.error("Numeric score columns not found.")
+                st.error("Кестеден сандық ұпай деректері табылмады.")
                 st.stop()
                 
             fb_col = max(str_cols, key=lambda c: df_stat[c].astype(str).str.len().mean()) if str_cols else None
             
-            rename_map = {student_col: t("col_student"), score_col: t("col_score")}
+            rename_map = {student_col: "Оқушы аты-жөні", score_col: "Бекітілген ұпай"}
             if max_col is not None:
-                rename_map[max_col] = t("col_max")
+                rename_map[max_col] = "Максималды балл"
             if fb_col is not None and fb_col != student_col:
-                rename_map[fb_col] = t("col_fb")
+                rename_map[fb_col] = "Кері байланыс"
                 
             df_stat = df_stat.rename(columns=rename_map)
-            student_col = t("col_student")
-            score_col = t("col_score")
-            max_col_name = t("col_max") if max_col is not None else None
-            fb_col_name = t("col_fb") if (fb_col is not None and fb_col != student_col) else None
+            student_col = "Оқушы аты-жөні"
+            score_col = "Бекітілген ұпай"
+            max_col_name = "Максималды балл" if max_col is not None else None
+            fb_col_name = "Кері байланыс" if (fb_col is not None and fb_col != student_col) else None
         else:
             score_col = next((c for c in ['teacher_score', 'final_score', 'approved_score', 'score', 'proposed_score'] if c in df_stat.columns), None)
             student_col = next((c for c in ['student_code', 'student_name', 'student'] if c in df_stat.columns), None)
             max_col_name = 'max_score' if 'max_score' in df_stat.columns else None
             fb_col_name = next((c for c in ['feedback', 'explanation', 'rubric', 'teacher_comment'] if c in df_stat.columns), None)
 
+            rename_dict_map = {}
             if student_col:
-                df_stat = df_stat.rename(columns={student_col: t("col_student")})
-                student_col = t("col_student")
+                rename_dict_map[student_col] = "Оқушы аты-жөні"
+                student_col = "Оқушы аты-жөні"
+            if score_col:
+                rename_dict_map[score_col] = "Бекітілген ұпай"
+                score_col = "Бекітілген ұпай"
+            if max_col_name:
+                rename_dict_map[max_col_name] = "Максималды балл"
+                max_col_name = "Максималды балл"
+            if fb_col_name:
+                rename_dict_map[fb_col_name] = "Кері байланыс"
+                fb_col_name = "Кері байланыс"
+            df_stat = df_stat.rename(columns=rename_dict_map)
 
         if not score_col or score_col not in df_stat.columns:
-            st.error("Score column not found.")
+            st.error("Кестеден ұпай бағаны табылмады.")
             st.stop()
 
         df_stat[score_col] = pd.to_numeric(df_stat[score_col], errors='coerce').fillna(0.0)
         
         total_students = len(df_stat)
         avg_score = df_stat[score_col].mean()
-        pct_col_name = t("col_pct")
+        pct_col_name = "Пайыздық көрсеткіш (%)"
         
         if max_col_name and max_col_name in df_stat.columns:
             df_stat[max_col_name] = pd.to_numeric(df_stat[max_col_name], errors='coerce').fillna(10.0)
@@ -951,11 +956,11 @@ elif selected_menu_key == "menu_stats":
                 try:
                     feedback_records = []
                     for idx_r, r in df_stat.iterrows():
-                        st_name = r.get(student_col, f'Student-{idx_r+1}') if student_col else f'Student-{idx_r+1}'
+                        st_name = r.get(student_col, f'Оқушы-{idx_r+1}') if student_col else f'Оқушы-{idx_r+1}'
                         sc = r.get(score_col, 0)
                         mx = r.get(max_col_name, max_possible) if max_col_name else max_possible
                         fb = r.get(fb_col_name, '') if fb_col_name else ''
-                        feedback_records.append(f"Student: {st_name} | Score: {sc}/{mx}\nFeedback:\n{fb}\n---")
+                        feedback_records.append(f"Оқушы: {st_name} | Балл: {sc}/{mx}\nТалдауы:\n{fb}\n---")
                     
                     combined_data = "\n".join(feedback_records)
 
@@ -1031,7 +1036,7 @@ REQUIRED STRUCTURE (In English, formal pedagogical style):
                     )
                     st.session_state.class_ai_analysis = resp.choices[0].message.content
                 except Exception as e:
-                    st.error(f"Error: {e}")
+                    st.error(f"Қате: {e}")
 
         if st.session_state.class_ai_analysis:
             st.markdown(f"<div class='analysis-box'>{st.session_state.class_ai_analysis}</div>", unsafe_allow_html=True)
@@ -1044,28 +1049,50 @@ REQUIRED STRUCTURE (In English, formal pedagogical style):
         st.markdown("---")
         st.markdown(t("export_hdr"))
         
+        # Excel-ге тек таза қазақша бағандарды шығару
+        export_cols = []
+        if student_col and student_col in df_stat.columns:
+            export_cols.append(student_col)
+        if score_col and score_col in df_stat.columns:
+            export_cols.append(score_col)
+        if max_col_name and max_col_name in df_stat.columns:
+            export_cols.append(max_col_name)
+        if pct_col_name in df_stat.columns:
+            export_cols.append(pct_col_name)
+        if fb_col_name and fb_col_name in df_stat.columns:
+            export_cols.append(fb_col_name)
+
+        df_export_students = df_stat[export_cols].copy() if export_cols else df_stat.copy()
+        df_export_students[pct_col_name] = df_export_students[pct_col_name].round(1)
+
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df_stat.to_excel(writer, index=False, sheet_name='Results')
+            df_export_students.to_excel(writer, index=False, sheet_name='Оқушылар_нәтижесі')
             
             summary_df = pd.DataFrame({
-                "Metric": [t("m_students"), t("m_avg"), t("m_pass"), t("m_qual"), "Pedagogical Analysis"],
-                "Value": [
+                "Көрсеткіш": [
+                    "Оқушы саны", 
+                    "Орташа балл", 
+                    "Үлгерім пайызы (%)", 
+                    "Білім сапасы (%)", 
+                    "Педагогикалық талдау"
+                ],
+                "Мәні": [
                     total_students, 
                     round(avg_score, 1), 
                     round(passing_rate, 1), 
                     round(quality_rate, 1),
-                    st.session_state.class_ai_analysis if st.session_state.class_ai_analysis else "-"
+                    st.session_state.class_ai_analysis if st.session_state.class_ai_analysis else "Талдау жасалмаған"
                 ]
             })
-            summary_df.to_excel(writer, index=False, sheet_name='Summary_Analysis')
+            summary_df.to_excel(writer, index=False, sheet_name='Қорытынды_анализ')
             
         excel_data = output.getvalue()
 
         st.download_button(
             label=t("excel_btn"),
             data=excel_data,
-            file_name="SmartTest_Class_Analysis.xlsx",
+            file_name="SmartTest_Сынып_талдауы.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
@@ -1087,14 +1114,14 @@ elif selected_menu_key == "menu_billing":
         if os.path.exists("kaspi_qr_ИЗС.png"):
             st.image("kaspi_qr_ИЗС.png", caption="SmartTest — Kaspi Pay QR", width=260)
         else:
-            st.warning("⚠️ `kaspi_qr_ИЗС.png` not found.")
+            st.warning("⚠️ `kaspi_qr_ИЗС.png` файлы табылмады.")
             
     with qr_col2:
         st.write("### 🟢 Halyk QR")
         if os.path.exists("halyk_qr_ЫРЫС.png"):
             st.image("halyk_qr_ЫРЫС.png", caption="SmartTest — Halyk QR", width=260)
         else:
-            st.warning("⚠️ `halyk_qr_ЫРЫС.png` not found.")
+            st.warning("⚠️ `halyk_qr_ЫРЫС.png` файлы табылмады.")
     
     with st.form("payment_verification_form"):
         st.markdown(t("txn_hdr"))
@@ -1110,7 +1137,7 @@ elif selected_menu_key == "menu_billing":
                     add_payment_record(current_user, amount, float(credits_to_buy), txn_id.strip())
                     st.success(t("txn_ok").format(credits_to_buy))
                 except Exception as e:
-                    st.error(f"Error: {e}")
+                    st.error(f"Қате: {e}")
 
 elif selected_menu_key == "menu_security":
     if not is_admin:
