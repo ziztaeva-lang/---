@@ -14,6 +14,13 @@ from security_layer import (
     get_user_role, get_user_subject
 )
 
+# iPhone .HEIC / .HEIF форматтарын қолдау
+try:
+    from pillow_heif import register_heif_opener
+    register_heif_opener()
+except ImportError:
+    pass
+
 st.set_page_config(page_title="SmartTest БЖБ–ТЖБ", layout="wide")
 init_db()
 
@@ -50,12 +57,20 @@ TRANSLATIONS = {
         "mode_lbl": "📂 Жүктеу режимін таңдаңыз:",
         "mode_multi_students": "📑 Әр файл = 1 жеке оқушы (Көпбетті PDF немесе бүкіл сынып файлдары)",
         "mode_single_student": "📚 Барлық жүктелген суреттер = 1 оқушының жұмысы (Бөлек фотоларды біріктіру)",
+        "mode_camera": "📸 Камерамен суретке түсіру (Бірнеше бетті қатарынан түсіру)",
         "max_score_lbl": "Ең жоғары балл (Шкала)",
-        "upload_lbl": "Оқушылардың жұмыс файлдарын жүктеу (JPG, PNG, көпбетті PDF — 1 файл = 1 кредит)",
-        "upload_single_lbl": "Бір оқушының барлық беттерін (суреттер немесе PDF) бірге жүктеңіз (1 кредит)",
+        "upload_lbl": "Оқушылардың жұмыс файлдарын жүктеу (JPG, PNG, HEIC, көпбетті PDF — 1 файл = 1 кредит)",
+        "upload_single_lbl": "Бір оқушының барлық беттерін (JPG, PNG, HEIC, PDF) бірге жүктеңіз (1 кредит)",
+        "cam_widget_lbl": "📸 Дәптер бетін камерамен түсіріңіз",
+        "cam_add_btn": "➕ Осы бетті тізімге қосу",
+        "cam_clear_btn": "🗑️ Түсірілген беттерді тазалау (Келесі оқушы)",
+        "cam_added_ok": "✅ {}-бет сәтті қосылды! Келесі бетті түсіре беруіңізге болады.",
+        "cam_no_photo_warn": "⚠️ Алдымен камерамен суретке түсіріңіз!",
+        "cam_pages_count": "📸 Қазір жиналған беттер саны: **{} бет** (Барлығы бірге 1 кредитпен тексеріледі)",
+        "cam_empty_info": "ℹ️ Камераны іске қосып, дәптердің 1-ші бетін түсіріңіз де, **➕ Осы бетті тізімге қосу** батырмасын басыңыз.",
         "uploaded_ok": "Барлығы {} файл жүктелді (әр көпбетті PDF ішіндегі барлық беттер біртұтас жұмыс ретінде 1 кредитпен тексеріледі).",
         "uploaded_single_ok": "Бір оқушының {} файлы (барлығы {} бет) жүктелді. Барлық беттер біртұтас жұмыс ретінде 1 кредитпен тексеріледі.",
-        "page_caption": "{}-файл: {}",
+        "page_caption": "{}-бет: {}",
         "bulk_check_btn": "⚡ Барлық жұмысты бірден тексеру",
         "all_checked_info": "ℹ️ Барлық жүктелген жұмыстар тексеріліп қойған.",
         "no_credits_bulk": "❌ Барлық {} жұмысты тексеру үшін {} кредит қажет (Сізде: {} кредит).",
@@ -158,12 +173,20 @@ TRANSLATIONS = {
         "mode_lbl": "📂 Выберите режим загрузки:",
         "mode_multi_students": "📑 Каждый файл = 1 отдельный ученик (Многостраничный PDF или файлы всего класса)",
         "mode_single_student": "📚 Все загруженные фото = работа 1 ученика (Объединение отдельных фото)",
+        "mode_camera": "📸 Сделать фото камерой (Съемка нескольких страниц подряд)",
         "max_score_lbl": "Максимальный балл (Шкала)",
-        "upload_lbl": "Загрузить файлы работ учащихся (JPG, PNG, многостраничный PDF — 1 файл = 1 кредит)",
-        "upload_single_lbl": "Загрузите все страницы (фото или PDF) одного ученика вместе (1 кредит)",
+        "upload_lbl": "Загрузить файлы работ учащихся (JPG, PNG, HEIC, многостраничный PDF — 1 файл = 1 кредит)",
+        "upload_single_lbl": "Загрузите все страницы (JPG, PNG, HEIC, PDF) одного ученика вместе (1 кредит)",
+        "cam_widget_lbl": "📸 Сфотографируйте страницу тетради",
+        "cam_add_btn": "➕ Добавить эту страницу в список",
+        "cam_clear_btn": "🗑️ Очистить снятые страницы (Следующий ученик)",
+        "cam_added_ok": "✅ Страница №{} добавлена! Можете сфотографировать следующую страницу.",
+        "cam_no_photo_warn": "⚠️ Сначала сделайте снимок камерой!",
+        "cam_pages_count": "📸 Собрано страниц: **{} стр.** (Все вместе проверяются за 1 кредит)",
+        "cam_empty_info": "ℹ️ Включите камеру, сфотографируйте 1-ю страницу тетради и нажмите **➕ Добавить эту страницу в список**.",
         "uploaded_ok": "Всего загружено файлов: {} (все страницы внутри каждого PDF проверяются как единая работа за 1 кредит).",
         "uploaded_single_ok": "Загружено файлов одного ученика: {} (всего страниц: {}). Все страницы будут проверены как единая работа за 1 кредит.",
-        "page_caption": "Файл {}: {}",
+        "page_caption": "Страница {}: {}",
         "bulk_check_btn": "⚡ Проверить все работы сразу",
         "all_checked_info": "ℹ️ Все загруженные работы уже проверены.",
         "no_credits_bulk": "❌ Для проверки всех {} работ необходимо {} кредитов (У вас: {} кредитов).",
@@ -266,12 +289,20 @@ TRANSLATIONS = {
         "mode_lbl": "📂 Select Upload Mode:",
         "mode_multi_students": "📑 Each file = 1 individual student (Multi-page PDF or batch class files)",
         "mode_single_student": "📚 All uploaded images = 1 student's work (Combine separate photos)",
+        "mode_camera": "📸 Capture with Camera (Take multiple pages sequentially)",
         "max_score_lbl": "Maximum Score (Scale)",
-        "upload_lbl": "Upload student work files (JPG, PNG, multi-page PDF — 1 file = 1 credit)",
-        "upload_single_lbl": "Upload all pages (images or PDF) of a single student together (1 credit)",
+        "upload_lbl": "Upload student work files (JPG, PNG, HEIC, multi-page PDF — 1 file = 1 credit)",
+        "upload_single_lbl": "Upload all pages (JPG, PNG, HEIC, PDF) of a single student together (1 credit)",
+        "cam_widget_lbl": "📸 Take a photo of the notebook page",
+        "cam_add_btn": "➕ Add This Page to List",
+        "cam_clear_btn": "🗑️ Clear Captured Pages (Next Student)",
+        "cam_added_ok": "✅ Page #{} added! You may capture the next page.",
+        "cam_no_photo_warn": "⚠️ Please take a photo with the camera first!",
+        "cam_pages_count": "📸 Captured pages count: **{} page(s)** (Graded together for 1 credit)",
+        "cam_empty_info": "ℹ️ Activate the camera, snap the 1st page of the notebook, and click **➕ Add This Page to List**.",
         "uploaded_ok": "Total {} files uploaded (all pages inside each multi-page PDF are graded together for 1 credit).",
         "uploaded_single_ok": "{} files ({} total pages) uploaded for 1 student. All pages will be graded together for 1 credit.",
-        "page_caption": "File {}: {}",
+        "page_caption": "Page {}: {}",
         "bulk_check_btn": "⚡ Grade All Works at Once",
         "all_checked_info": "ℹ️ All uploaded works have already been graded.",
         "no_credits_bulk": "❌ {} credits are required to grade all {} works (Your balance: {} credits).",
@@ -443,7 +474,7 @@ def count_pages_in_files(files_list):
             total += 1
     return total
 
-# --- ФАЙЛДАРДЫ ЖИ-ГЕ ДАЙЫНДАУ ФУНКЦИЯСЫ (PDF БАРЛЫҚ БЕТТЕРІ + СУРЕТТЕР) ---
+# --- ФАЙЛДАРДЫ ЖИ-ГЕ ДАЙЫНДАУ ФУНКЦИЯСЫ (PDF + JPG/PNG + HEIC/HEIF) ---
 def process_uploaded_files_list(files_list):
     images_b64 = []
     for uploaded_file in files_list:
@@ -652,11 +683,14 @@ if selected_menu_key == "menu_home":
 elif selected_menu_key == "menu_check":
     st.subheader(t("check_sub"))
     
-    # --- ЖҮКТЕУ РЕЖИМІН ТАҢДАУ (КӨПБЕТТІ PDF / БҮКІЛ СЫНЫП vs БӨЛЕК СУРЕТТЕРДІ БІРІКТІРУ) ---
+    # --- 3 ЖҮКТЕУ РЕЖИМІН ТАҢДАУ ---
     upload_mode = st.radio(
         t("mode_lbl"),
-        ["multi_students", "single_student"],
-        format_func=lambda m: t("mode_multi_students") if m == "multi_students" else t("mode_single_student")
+        ["multi_students", "single_student", "camera_mode"],
+        format_func=lambda m: (
+            t("mode_multi_students") if m == "multi_students" 
+            else (t("mode_single_student") if m == "single_student" else t("mode_camera"))
+        )
     )
 
     max_score = st.number_input(
@@ -667,66 +701,83 @@ elif selected_menu_key == "menu_check":
         step=1.0
     )
 
-    uploader_prompt = t("upload_lbl") if upload_mode == "multi_students" else t("upload_single_lbl")
-    uploaded_files = st.file_uploader(uploader_prompt, type=["jpg", "jpeg", "png", "pdf"], accept_multiple_files=True)
-    
-    if uploaded_files:
-        # =====================================================================
-        # РЕЖИМ 2: БАРЛЫҚ ЖҮКТЕЛГЕН СУРЕТТЕР / БЕТТЕР = 1 ОҚУШЫНЫҢ ЖҰМЫСЫ (1 КРЕДИТ)
-        # =====================================================================
-        if upload_mode == "single_student":
-            total_p = count_pages_in_files(uploaded_files)
-            st.success(t("uploaded_single_ok").format(len(uploaded_files), total_p))
-            files_sig = "_".join([f.name for f in uploaded_files])
-            
+    # =========================================================================
+    # РЕЖИМ 3: КАМЕРАМЕН БІРНЕШЕ БЕТТІ ҚАТАРЫНАН СУРЕТКЕ ТҮСІРУ (1 КРЕДИТ)
+    # =========================================================================
+    if upload_mode == "camera_mode":
+        if "camera_pages" not in st.session_state:
+            st.session_state.camera_pages = []
+        if "cam_widget_counter" not in st.session_state:
+            st.session_state.cam_widget_counter = 0
+
+        cam_photo = st.camera_input(
+            t("cam_widget_lbl"), 
+            key=f"cam_input_{st.session_state.cam_widget_counter}"
+        )
+
+        cam_btn_col1, cam_btn_col2 = st.columns(2)
+        with cam_btn_col1:
+            if st.button(t("cam_add_btn"), use_container_width=True):
+                if cam_photo is not None:
+                    st.session_state.camera_pages.append(cam_photo)
+                    st.session_state.cam_widget_counter += 1
+                    st.success(t("cam_added_ok").format(len(st.session_state.camera_pages)))
+                    st.rerun()
+                else:
+                    st.warning(t("cam_no_photo_warn"))
+
+        with cam_btn_col2:
+            if st.button(t("cam_clear_btn"), use_container_width=True):
+                st.session_state.camera_pages = []
+                st.session_state.cam_ai_result = ""
+                st.session_state.cam_exp_text = ""
+                st.session_state.cam_score = 0.0
+                st.session_state.cam_widget_counter += 1
+                st.rerun()
+
+        if st.session_state.camera_pages:
+            st.success(t("cam_pages_count").format(len(st.session_state.camera_pages)))
             col_img, col_form = st.columns([1, 1])
             with col_img:
-                for p_idx, f in enumerate(uploaded_files):
+                for p_idx, f in enumerate(st.session_state.camera_pages):
                     st.markdown(f"**{t('page_caption').format(p_idx+1, f.name)}**")
-                    if f.name.lower().endswith('.pdf'):
-                        p_cnt = count_pages_in_files([f])
-                        st.info(t("pdf_loaded").format(p_cnt))
-                    else:
-                        try:
-                            image = Image.open(f)
-                            st.image(image, use_container_width=True)
-                        except Exception:
-                            st.error(t("img_err"))
-                            
+                    try:
+                        image = Image.open(f)
+                        st.image(image, use_container_width=True)
+                    except Exception:
+                        st.error(t("img_err"))
+
             with col_form:
-                single_name_key = f"single_st_name_{files_sig}"
-                single_ai_key = f"single_st_ai_{files_sig}"
-                single_score_key = f"single_st_score_{files_sig}"
-                single_exp_key = f"single_st_exp_{files_sig}"
-                
                 st_code = st.text_input(
                     t("student_name_lbl"),
                     placeholder=t("student_name_ph"),
-                    key=single_name_key
+                    key="cam_st_name"
                 )
-                
-                if single_ai_key not in st.session_state:
-                    st.session_state[single_ai_key] = ""
-                    
-                if st.button(t("multi_page_check_btn"), key=f"btn_multi_page_{files_sig}"):
+
+                if "cam_ai_result" not in st.session_state:
+                    st.session_state.cam_ai_result = ""
+
+                if st.button(t("multi_page_check_btn"), key="btn_check_cam"):
                     current_balance = get_user_credits(current_user)
                     if not is_admin and current_balance < 1.0:
                         st.error(t("no_credits_err"))
                     else:
                         with st.spinner(t("ai_spinner")):
                             try:
-                                full_ai_resp, extracted_score = evaluate_student_work(client, uploaded_files, max_score, st.session_state.lang)
-                                st.session_state[single_ai_key] = full_ai_resp
-                                st.session_state[single_exp_key] = full_ai_resp
-                                st.session_state[single_score_key] = extracted_score
+                                full_ai_resp, extracted_score = evaluate_student_work(
+                                    client, st.session_state.camera_pages, max_score, st.session_state.lang
+                                )
+                                st.session_state.cam_ai_result = full_ai_resp
+                                st.session_state.cam_exp_text = full_ai_resp
+                                st.session_state.cam_score = extracted_score
                                 if not is_admin:
                                     deduct_credit(current_user, amount=1.0)
                                 st.success(t("single_check_ok"))
                                 st.rerun()
                             except Exception as e:
                                 st.error(f"Қате: {e}")
-                                
-                current_ai_text = st.session_state.get(single_ai_key, "")
+
+                current_ai_text = st.session_state.get("cam_ai_result", "")
                 if current_ai_text:
                     st.markdown(t("analysis_res_hdr"))
                     lines = current_ai_text.split('\n')
@@ -741,33 +792,34 @@ elif selected_menu_key == "menu_check":
                             st.write(line)
                 else:
                     st.info(t("check_hint"))
-                    
+
                 prop_score = st.number_input(
                     t("score_input_lbl"),
                     min_value=0.0,
                     max_value=float(max_score),
-                    value=st.session_state.get(single_score_key, 0.0),
+                    value=st.session_state.get("cam_score", 0.0),
                     step=0.5,
-                    key=single_score_key
+                    key="cam_score"
                 )
-                
-                if single_exp_key not in st.session_state:
-                    st.session_state[single_exp_key] = current_ai_text
-                    
+
+                if "cam_exp_text" not in st.session_state:
+                    st.session_state.cam_exp_text = current_ai_text
+
                 explanation = st.text_area(
                     t("feedback_lbl"),
-                    value=st.session_state[single_exp_key],
+                    value=st.session_state.cam_exp_text,
                     height=250,
-                    key=single_exp_key
+                    key="cam_exp_text"
                 )
-                
-                if st.button(t("save_btn"), key=f"save_single_{files_sig}"):
+
+                if st.button(t("save_btn"), key="save_cam_btn"):
                     current_st_name = st_code.strip()
                     if current_st_name:
-                        full_feedback = f"Кері байланыс ({total_p} бет):\n{explanation.strip()}"
+                        pages_num = len(st.session_state.camera_pages)
+                        full_feedback = f"Кері байланыс (Камера, {pages_num} бет):\n{explanation.strip()}"
                         save_pending_result(
                             current_st_name,
-                            f"[Автоматты тексеру] Оқушы жұмысы ({total_p} бет)",
+                            f"[Камера] Оқушы жұмысы ({pages_num} бет)",
                             "ҚР стандарттары бойынша критериалды бағалау",
                             float(prop_score),
                             float(max_score),
@@ -776,182 +828,298 @@ elif selected_menu_key == "menu_check":
                         st.success(t("save_ok").format(current_st_name))
                     else:
                         st.error(t("save_name_err"))
-
-        # =====================================================================
-        # РЕЖИМ 1: ӘР ФАЙЛ (СОНЫҢ ІШІНДЕ КӨПБЕТТІ PDF) = 1 ЖЕКЕ ОҚУШЫ (1 КРЕДИТ)
-        # =====================================================================
         else:
-            st.success(t("uploaded_ok").format(len(uploaded_files)))
-            
-            bulk_col1, bulk_col2 = st.columns(2)
-            with bulk_col1:
-                if st.button(t("bulk_check_btn"), use_container_width=True):
-                    unchecked_indices = [
-                        i for i, f in enumerate(uploaded_files) 
-                        if not st.session_state.get(f"ai_result_{i}_{f.name}", "")
-                    ]
-                    if not unchecked_indices:
-                        st.info(t("all_checked_info"))
-                    else:
-                        current_balance = get_user_credits(current_user)
-                        needed_credits = float(len(unchecked_indices))
-                        if not is_admin and current_balance < needed_credits:
-                            st.error(t("no_credits_bulk").format(len(unchecked_indices), int(needed_credits), int(current_balance)))
-                        else:
-                            progress_bar = st.progress(0)
-                            status_text = st.empty()
-                            for step_num, idx in enumerate(unchecked_indices):
-                                f = uploaded_files[idx]
-                                st_name_preview = st.session_state.get(f"name_input_{idx}_{f.name}", f"{t('work_lbl')}{idx+1}").strip() or f"{t('work_lbl')}{idx+1}"
-                                status_text.info(t("checking_progress").format(step_num+1, len(unchecked_indices), st_name_preview))
-                                try:
-                                    ai_resp, sc = evaluate_student_work(client, [f], max_score, st.session_state.lang)
-                                    st.session_state[f"ai_result_{idx}_{f.name}"] = ai_resp
-                                    st.session_state[f"exp_text_{idx}_{f.name}"] = ai_resp
-                                    st.session_state[f"score_{idx}_{f.name}"] = sc
-                                    if not is_admin:
-                                        deduct_credit(current_user, amount=1.0)
-                                except Exception as e:
-                                    st.error(f"Қате ({f.name}): {e}")
-                                progress_bar.progress((step_num + 1) / len(unchecked_indices))
-                            status_text.success(t("bulk_check_done"))
-                            st.rerun()
+            st.info(t("cam_empty_info"))
 
-            with bulk_col2:
-                if st.button(t("bulk_save_btn"), use_container_width=True):
-                    missing_names = []
-                    saved_count = 0
-                    for idx, f in enumerate(uploaded_files):
-                        st_name = st.session_state.get(f"name_input_{idx}_{f.name}", "").strip()
-                        if not st_name:
-                            missing_names.append(f"{t('work_lbl')}{idx+1} ({f.name})")
-                    
-                    if missing_names:
-                        st.error(t("missing_names_err").format(', '.join(missing_names)))
-                    else:
-                        for idx, f in enumerate(uploaded_files):
-                            st_name = st.session_state.get(f"name_input_{idx}_{f.name}", "").strip()
-                            sc = float(st.session_state.get(f"score_{idx}_{f.name}", 0.0))
-                            exp_txt = st.session_state.get(f"exp_text_{idx}_{f.name}", "").strip()
-                            full_feedback = f"Кері байланыс:\n{exp_txt}"
-                            save_pending_result(
-                                st_name,
-                                "[Автоматты тексеру] Оқушы жұмысы",
-                                "ҚР стандарттары бойынша критериалды бағалау",
-                                sc,
-                                float(max_score),
-                                full_feedback
-                            )
-                            saved_count += 1
-                        st.success(t("bulk_save_done").format(saved_count))
-
-            st.markdown("---")
-
-            for idx, uploaded_file in enumerate(uploaded_files):
-                input_key = f"name_input_{idx}_{uploaded_file.name}"
-                current_display_name = st.session_state.get(input_key, "").strip()
-                ai_res_key = f"ai_result_{idx}_{uploaded_file.name}"
-                is_checked = bool(st.session_state.get(ai_res_key, ""))
-                status_badge = t("status_checked") if is_checked else t("status_pending")
-                p_cnt = count_pages_in_files([uploaded_file])
-                page_tag = f" ({p_cnt} бет)" if p_cnt > 1 else ""
+    # =========================================================================
+    # РЕЖИМ 1 ЖӘНЕ РЕЖИМ 2: ФАЙЛ ЖҮКТЕУ (JPG, PNG, HEIC, PDF)
+    # =========================================================================
+    else:
+        uploader_prompt = t("upload_lbl") if upload_mode == "multi_students" else t("upload_single_lbl")
+        uploaded_files = st.file_uploader(
+            uploader_prompt, 
+            type=["jpg", "jpeg", "png", "pdf", "heic", "heif"], 
+            accept_multiple_files=True
+        )
+        
+        if uploaded_files:
+            # --- РЕЖИМ 2: БАРЛЫҚ ЖҮКТЕЛГЕН СУРЕТТЕР / БЕТТЕР = 1 ОҚУШЫ (1 КРЕДИТ) ---
+            if upload_mode == "single_student":
+                total_p = count_pages_in_files(uploaded_files)
+                st.success(t("uploaded_single_ok").format(len(uploaded_files), total_p))
+                files_sig = "_".join([f.name for f in uploaded_files])
                 
-                expander_title = f"📁 {t('work_lbl')}{idx+1}: {current_display_name if current_display_name else uploaded_file.name}{page_tag} — [{status_badge}]"
-                
-                with st.expander(expander_title, expanded=True):
-                    col_img, col_form = st.columns([1, 1])
-                    with col_img:
-                        if uploaded_file.name.lower().endswith('.pdf'):
+                col_img, col_form = st.columns([1, 1])
+                with col_img:
+                    for p_idx, f in enumerate(uploaded_files):
+                        st.markdown(f"**{t('page_caption').format(p_idx+1, f.name)}**")
+                        if f.name.lower().endswith('.pdf'):
+                            p_cnt = count_pages_in_files([f])
                             st.info(t("pdf_loaded").format(p_cnt))
                         else:
                             try:
-                                image = Image.open(uploaded_file)
-                                st.image(image, caption=uploaded_file.name, use_container_width=True)
+                                image = Image.open(f)
+                                st.image(image, use_container_width=True)
                             except Exception:
                                 st.error(t("img_err"))
-                    with col_form:
-                        st_code = st.text_input(
-                            t("student_name_lbl"), 
-                            placeholder=t("student_name_ph"), 
-                            key=input_key
-                        )
+                                
+                with col_form:
+                    single_name_key = f"single_st_name_{files_sig}"
+                    single_ai_key = f"single_st_ai_{files_sig}"
+                    single_score_key = f"single_st_score_{files_sig}"
+                    single_exp_key = f"single_st_exp_{files_sig}"
+                    
+                    st_code = st.text_input(
+                        t("student_name_lbl"),
+                        placeholder=t("student_name_ph"),
+                        key=single_name_key
+                    )
+                    
+                    if single_ai_key not in st.session_state:
+                        st.session_state[single_ai_key] = ""
                         
-                        if ai_res_key not in st.session_state:
-                            st.session_state[ai_res_key] = ""
+                    if st.button(t("multi_page_check_btn"), key=f"btn_multi_page_{files_sig}"):
+                        current_balance = get_user_credits(current_user)
+                        if not is_admin and current_balance < 1.0:
+                            st.error(t("no_credits_err"))
+                        else:
+                            with st.spinner(t("ai_spinner")):
+                                try:
+                                    full_ai_resp, extracted_score = evaluate_student_work(client, uploaded_files, max_score, st.session_state.lang)
+                                    st.session_state[single_ai_key] = full_ai_resp
+                                    st.session_state[single_exp_key] = full_ai_resp
+                                    st.session_state[single_score_key] = extracted_score
+                                    if not is_admin:
+                                        deduct_credit(current_user, amount=1.0)
+                                    st.success(t("single_check_ok"))
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Қате: {e}")
+                                    
+                    current_ai_text = st.session_state.get(single_ai_key, "")
+                    if current_ai_text:
+                        st.markdown(t("analysis_res_hdr"))
+                        lines = current_ai_text.split('\n')
+                        for line in lines:
+                            if any(k in line for k in ['🟢', '[Дұрыс]', '[Верно]', '[Correct]', 'дұрыс', 'верно', 'correct']):
+                                st.markdown(f"<div class='correct-card'>{line}</div>", unsafe_allow_html=True)
+                            elif any(k in line for k in ['🔴', '[Қате]', '[Ошибка]', '[Incorrect]', 'қате', 'ошибка', 'incorrect']):
+                                st.markdown(f"<div class='incorrect-card'>{line}</div>", unsafe_allow_html=True)
+                            elif any(k in line for k in ['🟡', '[Жартылай]', '[Частично]', '[Partial]', 'жартылай', 'частично', 'partial']):
+                                st.markdown(f"<div class='warning-card'>{line}</div>", unsafe_allow_html=True)
+                            elif line.strip():
+                                st.write(line)
+                    else:
+                        st.info(t("check_hint"))
+                        
+                    prop_score = st.number_input(
+                        t("score_input_lbl"),
+                        min_value=0.0,
+                        max_value=float(max_score),
+                        value=st.session_state.get(single_score_key, 0.0),
+                        step=0.5,
+                        key=single_score_key
+                    )
+                    
+                    if single_exp_key not in st.session_state:
+                        st.session_state[single_exp_key] = current_ai_text
+                        
+                    explanation = st.text_area(
+                        t("feedback_lbl"),
+                        value=st.session_state[single_exp_key],
+                        height=250,
+                        key=single_exp_key
+                    )
+                    
+                    if st.button(t("save_btn"), key=f"save_single_{files_sig}"):
+                        current_st_name = st_code.strip()
+                        if current_st_name:
+                            full_feedback = f"Кері байланыс ({total_p} бет):\n{explanation.strip()}"
+                            save_pending_result(
+                                current_st_name,
+                                f"[Автоматты тексеру] Оқушы жұмысы ({total_p} бет)",
+                                "ҚР стандарттары бойынша критериалды бағалау",
+                                float(prop_score),
+                                float(max_score),
+                                full_feedback
+                            )
+                            st.success(t("save_ok").format(current_st_name))
+                        else:
+                            st.error(t("save_name_err"))
 
-                        if st.button(t("single_check_btn"), key=f"ai_btn_{idx}_{uploaded_file.name}"):
+            # --- РЕЖИМ 1: ӘР ФАЙЛ (КӨПБЕТТІ PDF НЕМЕСЕ СУРЕТ) = 1 ЖЕКЕ ОҚУШЫ ---
+            else:
+                st.success(t("uploaded_ok").format(len(uploaded_files)))
+                
+                bulk_col1, bulk_col2 = st.columns(2)
+                with bulk_col1:
+                    if st.button(t("bulk_check_btn"), use_container_width=True):
+                        unchecked_indices = [
+                            i for i, f in enumerate(uploaded_files) 
+                            if not st.session_state.get(f"ai_result_{i}_{f.name}", "")
+                        ]
+                        if not unchecked_indices:
+                            st.info(t("all_checked_info"))
+                        else:
                             current_balance = get_user_credits(current_user)
-                            
-                            if not is_admin and current_balance < 1.0:
-                                st.error(t("no_credits_err"))
+                            needed_credits = float(len(unchecked_indices))
+                            if not is_admin and current_balance < needed_credits:
+                                st.error(t("no_credits_bulk").format(len(unchecked_indices), int(needed_credits), int(current_balance)))
                             else:
-                                with st.spinner(t("ai_spinner")):
+                                progress_bar = st.progress(0)
+                                status_text = st.empty()
+                                for step_num, idx in enumerate(unchecked_indices):
+                                    f = uploaded_files[idx]
+                                    st_name_preview = st.session_state.get(f"name_input_{idx}_{f.name}", f"{t('work_lbl')}{idx+1}").strip() or f"{t('work_lbl')}{idx+1}"
+                                    status_text.info(t("checking_progress").format(step_num+1, len(unchecked_indices), st_name_preview))
                                     try:
-                                        full_ai_resp, extracted_score = evaluate_student_work(client, [uploaded_file], max_score, st.session_state.lang)
-                                        st.session_state[ai_res_key] = full_ai_resp
-                                        st.session_state[f"exp_text_{idx}_{uploaded_file.name}"] = full_ai_resp
-                                        st.session_state[f"score_{idx}_{uploaded_file.name}"] = extracted_score
-                                        
+                                        ai_resp, sc = evaluate_student_work(client, [f], max_score, st.session_state.lang)
+                                        st.session_state[f"ai_result_{idx}_{f.name}"] = ai_resp
+                                        st.session_state[f"exp_text_{idx}_{f.name}"] = ai_resp
+                                        st.session_state[f"score_{idx}_{f.name}"] = sc
                                         if not is_admin:
                                             deduct_credit(current_user, amount=1.0)
-                                        st.success(t("single_check_ok"))
-                                        st.rerun()
                                     except Exception as e:
-                                        st.error(f"Қате: {e}")
+                                        st.error(f"Қате ({f.name}): {e}")
+                                    progress_bar.progress((step_num + 1) / len(unchecked_indices))
+                                status_text.success(t("bulk_check_done"))
+                                st.rerun()
 
-                        current_ai_text = st.session_state.get(ai_res_key, "")
+                with bulk_col2:
+                    if st.button(t("bulk_save_btn"), use_container_width=True):
+                        missing_names = []
+                        saved_count = 0
+                        for idx, f in enumerate(uploaded_files):
+                            st_name = st.session_state.get(f"name_input_{idx}_{f.name}", "").strip()
+                            if not st_name:
+                                missing_names.append(f"{t('work_lbl')}{idx+1} ({f.name})")
                         
-                        if current_ai_text:
-                            st.markdown(t("analysis_res_hdr"))
-                            lines = current_ai_text.split('\n')
-                            for line in lines:
-                                if any(k in line for k in ['🟢', '[Дұрыс]', '[Верно]', '[Correct]', 'дұрыс', 'верно', 'correct']):
-                                    st.markdown(f"<div class='correct-card'>{line}</div>", unsafe_allow_html=True)
-                                elif any(k in line for k in ['🔴', '[Қате]', '[Ошибка]', '[Incorrect]', 'қате', 'ошибка', 'incorrect']):
-                                    st.markdown(f"<div class='incorrect-card'>{line}</div>", unsafe_allow_html=True)
-                                elif any(k in line for k in ['🟡', '[Жартылай]', '[Частично]', '[Partial]', 'жартылай', 'частично', 'partial']):
-                                    st.markdown(f"<div class='warning-card'>{line}</div>", unsafe_allow_html=True)
-                                elif line.strip():
-                                    st.write(line)
+                        if missing_names:
+                            st.error(t("missing_names_err").format(', '.join(missing_names)))
                         else:
-                            st.info(t("check_hint"))
-
-                        score_key = f"score_{idx}_{uploaded_file.name}"
-                        prop_score = st.number_input(
-                            t("score_input_lbl"), 
-                            min_value=0.0, 
-                            max_value=float(max_score), 
-                            value=st.session_state.get(score_key, 0.0), 
-                            step=0.5, 
-                            key=score_key
-                        )
-                        
-                        exp_key = f"exp_text_{idx}_{uploaded_file.name}"
-                        if exp_key not in st.session_state:
-                            st.session_state[exp_key] = current_ai_text
-
-                        explanation = st.text_area(
-                            t("feedback_lbl"), 
-                            value=st.session_state[exp_key], 
-                            height=250, 
-                            key=exp_key
-                        )
-                        
-                        if st.button(t("save_btn"), key=f"save_btn_{idx}_{uploaded_file.name}"):
-                            current_st_name = st_code.strip()
-                            if current_st_name:
-                                full_feedback = f"Кері байланыс:\n{explanation.strip()}"
+                            for idx, f in enumerate(uploaded_files):
+                                st_name = st.session_state.get(f"name_input_{idx}_{f.name}", "").strip()
+                                sc = float(st.session_state.get(f"score_{idx}_{f.name}", 0.0))
+                                exp_txt = st.session_state.get(f"exp_text_{idx}_{f.name}", "").strip()
+                                full_feedback = f"Кері байланыс:\n{exp_txt}"
                                 save_pending_result(
-                                    current_st_name, 
-                                    "[Автоматты тексеру] Оқушы жұмысы", 
-                                    "ҚР стандарттары бойынша критериалды бағалау", 
-                                    float(prop_score), 
-                                    float(max_score), 
+                                    st_name,
+                                    "[Автоматты тексеру] Оқушы жұмысы",
+                                    "ҚР стандарттары бойынша критериалды бағалау",
+                                    sc,
+                                    float(max_score),
                                     full_feedback
                                 )
-                                st.success(t("save_ok").format(current_st_name))
+                                saved_count += 1
+                            st.success(t("bulk_save_done").format(saved_count))
+
+                st.markdown("---")
+
+                for idx, uploaded_file in enumerate(uploaded_files):
+                    input_key = f"name_input_{idx}_{uploaded_file.name}"
+                    current_display_name = st.session_state.get(input_key, "").strip()
+                    ai_res_key = f"ai_result_{idx}_{uploaded_file.name}"
+                    is_checked = bool(st.session_state.get(ai_res_key, ""))
+                    status_badge = t("status_checked") if is_checked else t("status_pending")
+                    p_cnt = count_pages_in_files([uploaded_file])
+                    page_tag = f" ({p_cnt} бет)" if p_cnt > 1 else ""
+                    
+                    expander_title = f"📁 {t('work_lbl')}{idx+1}: {current_display_name if current_display_name else uploaded_file.name}{page_tag} — [{status_badge}]"
+                    
+                    with st.expander(expander_title, expanded=True):
+                        col_img, col_form = st.columns([1, 1])
+                        with col_img:
+                            if uploaded_file.name.lower().endswith('.pdf'):
+                                st.info(t("pdf_loaded").format(p_cnt))
                             else:
-                                st.error(t("save_name_err"))
+                                try:
+                                    image = Image.open(uploaded_file)
+                                    st.image(image, caption=uploaded_file.name, use_container_width=True)
+                                except Exception:
+                                    st.error(t("img_err"))
+                        with col_form:
+                            st_code = st.text_input(
+                                t("student_name_lbl"), 
+                                placeholder=t("student_name_ph"), 
+                                key=input_key
+                            )
+                            
+                            if ai_res_key not in st.session_state:
+                                st.session_state[ai_res_key] = ""
+
+                            if st.button(t("single_check_btn"), key=f"ai_btn_{idx}_{uploaded_file.name}"):
+                                current_balance = get_user_credits(current_user)
+                                
+                                if not is_admin and current_balance < 1.0:
+                                    st.error(t("no_credits_err"))
+                                else:
+                                    with st.spinner(t("ai_spinner")):
+                                        try:
+                                            full_ai_resp, extracted_score = evaluate_student_work(client, [uploaded_file], max_score, st.session_state.lang)
+                                            st.session_state[ai_res_key] = full_ai_resp
+                                            st.session_state[f"exp_text_{idx}_{uploaded_file.name}"] = full_ai_resp
+                                            st.session_state[f"score_{idx}_{uploaded_file.name}"] = extracted_score
+                                            
+                                            if not is_admin:
+                                                deduct_credit(current_user, amount=1.0)
+                                            st.success(t("single_check_ok"))
+                                            st.rerun()
+                                        except Exception as e:
+                                            st.error(f"Қате: {e}")
+
+                            current_ai_text = st.session_state.get(ai_res_key, "")
+                            
+                            if current_ai_text:
+                                st.markdown(t("analysis_res_hdr"))
+                                lines = current_ai_text.split('\n')
+                                for line in lines:
+                                    if any(k in line for k in ['🟢', '[Дұрыс]', '[Верно]', '[Correct]', 'дұрыс', 'верно', 'correct']):
+                                        st.markdown(f"<div class='correct-card'>{line}</div>", unsafe_allow_html=True)
+                                    elif any(k in line for k in ['🔴', '[Қате]', '[Ошибка]', '[Incorrect]', 'қате', 'ошибка', 'incorrect']):
+                                        st.markdown(f"<div class='incorrect-card'>{line}</div>", unsafe_allow_html=True)
+                                    elif any(k in line for k in ['🟡', '[Жартылай]', '[Частично]', '[Partial]', 'жартылай', 'частично', 'partial']):
+                                        st.markdown(f"<div class='warning-card'>{line}</div>", unsafe_allow_html=True)
+                                    elif line.strip():
+                                        st.write(line)
+                            else:
+                                st.info(t("check_hint"))
+
+                            score_key = f"score_{idx}_{uploaded_file.name}"
+                            prop_score = st.number_input(
+                                t("score_input_lbl"), 
+                                min_value=0.0, 
+                                max_value=float(max_score), 
+                                value=st.session_state.get(score_key, 0.0), 
+                                step=0.5, 
+                                key=score_key
+                            )
+                            
+                            exp_key = f"exp_text_{idx}_{uploaded_file.name}"
+                            if exp_key not in st.session_state:
+                                st.session_state[exp_key] = current_ai_text
+
+                            explanation = st.text_area(
+                                t("feedback_lbl"), 
+                                value=st.session_state[exp_key], 
+                                height=250, 
+                                key=exp_key
+                            )
+                            
+                            if st.button(t("save_btn"), key=f"save_btn_{idx}_{uploaded_file.name}"):
+                                current_st_name = st_code.strip()
+                                if current_st_name:
+                                    full_feedback = f"Кері байланыс:\n{explanation.strip()}"
+                                    save_pending_result(
+                                        current_st_name, 
+                                        "[Автоматты тексеру] Оқушы жұмысы", 
+                                        "ҚР стандарттары бойынша критериалды бағалау", 
+                                        float(prop_score), 
+                                        float(max_score), 
+                                        full_feedback
+                                    )
+                                    st.success(t("save_ok").format(current_st_name))
+                                else:
+                                    st.error(t("save_name_err"))
 
 elif selected_menu_key == "menu_approve":
     st.subheader(t("approve_sub"))
@@ -1299,4 +1467,4 @@ elif selected_menu_key == "menu_security":
         st.stop()
 
     st.subheader(t("sec_sub"))
-    st.write(f"{t('user_lbl')}: **{current_user}** | {t('balance_lbl')}: **{user_balance} {t('credit_unit')}** ({total_tenge:,.0f} ₸)")
+    st.write(t("user_lbl") + f": **{current_user}** | " + t("balance_lbl") + f": **{user_balance} {t('credit_unit')}** ({total_tenge:,.0f} ₸)")
