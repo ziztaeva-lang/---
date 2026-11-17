@@ -11,7 +11,7 @@ from security_layer import (
     init_db, save_pending_result, get_pending_results, 
     approve_result, get_approved_results, external_ai_is_enabled,
     get_user_credits, deduct_credit, verify_user, add_payment_record,
-    get_user_role, get_user_subject
+    get_user_role, get_user_subject, clear_all_results
 )
 
 # iPhone .HEIC / .HEIF форматтарын қолдау
@@ -140,7 +140,11 @@ TRANSLATIONS = {
         "txn_err": "❌ Дұрыс транзакция нөмірін енгізіңіз!",
         "txn_ok": "✅ Өтінім қабылданды! Тексерілгеннен кейін балансыңызға {} кредит қосылады.",
         "sec_sub": "Қауіпсіздік және жүйе күйі",
-        "sec_denied": "⛔ Бұл бетке тек әкімші (admin) ғана кіре алады!"
+        "sec_denied": "⛔ Бұл бетке тек әкімші (admin) ғана кіре алады!",
+        "db_mgmt_hdr": "⚙️ Дерекқорды басқару және тазалау",
+        "db_mgmt_warn": "⚠️ Назар аударыңыз! Бұл әрекет базадағы барлық сақталған тексерілмеген және бекітілген оқушы нәтижелерін толығымен жояды.",
+        "db_clear_btn": "🗑️ Базадағы барлық нәтижелерді толық тазалау",
+        "db_clear_ok": "✅ Дерекқордағы барлық оқушы нәтижелері сәтті тазартылды!"
     },
     "РУС": {
         "lang_label": "🌐 Тіл / Язык / Language",
@@ -256,7 +260,11 @@ TRANSLATIONS = {
         "txn_err": "❌ Введите корректный номер транзакции!",
         "txn_ok": "✅ Заявка принята! После проверки на ваш баланс будет начислено {} кредитов.",
         "sec_sub": "Безопасность и состояние системы",
-        "sec_denied": "⛔ Доступ к этой странице разрешен только администратору (admin)!"
+        "sec_denied": "⛔ Доступ к этой странице разрешен только администратору (admin)!",
+        "db_mgmt_hdr": "⚙️ Управление и очистка базы данных",
+        "db_mgmt_warn": "⚠️ Внимание! Это действие полностью удалит все сохраненные результаты и незавершенные работы учащихся из базы данных.",
+        "db_clear_btn": "🗑️ Полностью очистить все результаты в базе",
+        "db_clear_ok": "✅ Все результаты учащихся в базе данных успешно очищены!"
     },
     "ENG": {
         "lang_label": "🌐 Тіл / Язык / Language",
@@ -372,7 +380,11 @@ TRANSLATIONS = {
         "txn_err": "❌ Please enter a valid transaction ID!",
         "txn_ok": "✅ Request received! {} credits will be added to your balance after verification.",
         "sec_sub": "Security & System Status",
-        "sec_denied": "⛔ Access to this page is restricted to administrators only!"
+        "sec_denied": "⛔ Access to this page is restricted to administrators only!",
+        "db_mgmt_hdr": "⚙️ Database Management & Cleanup",
+        "db_mgmt_warn": "⚠️ Warning! This action will completely delete all saved student results and unfinished works from the database.",
+        "db_clear_btn": "🗑️ Clear All Results in Database",
+        "db_clear_ok": "✅ All student results in the database have been successfully cleared!"
     }
 }
 
@@ -1468,3 +1480,15 @@ elif selected_menu_key == "menu_security":
 
     st.subheader(t("sec_sub"))
     st.write(t("user_lbl") + f": **{current_user}** | " + t("balance_lbl") + f": **{user_balance} {t('credit_unit')}** ({total_tenge:,.0f} ₸)")
+    
+    st.markdown("---")
+    st.subheader(t("db_mgmt_hdr"))
+    st.warning(t("db_mgmt_warn"))
+    
+    if st.button(t("db_clear_btn"), type="primary"):
+        try:
+            clear_all_results()
+            st.success(t("db_clear_ok"))
+            st.rerun()
+        except Exception as e:
+            st.error(f"Қате орын алды: {e}")

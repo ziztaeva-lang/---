@@ -196,3 +196,9 @@ def get_approved_results():
 
 def external_ai_is_enabled():
     return os.environ.get("SMARTTEST_EXTERNAL_AI", "0") == "1"
+def clear_all_results():
+    """Базадағы барлық нәтижелер мен аудит логтарын толық тазалау"""
+    with connect_db() as conn:
+        conn.execute("DELETE FROM results")
+        conn.execute("DELETE FROM audit_log")
+        conn.commit()
