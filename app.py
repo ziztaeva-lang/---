@@ -17,6 +17,319 @@ from security_layer import (
 st.set_page_config(page_title="SmartTest БЖБ–ТЖБ", layout="wide")
 init_db()
 
+# --- 3 ТІЛДІ СӨЗДІК (ҚАЗ / РУС / ENG) ---
+TRANSLATIONS = {
+    "ҚАЗ": {
+        "lang_label": "🌐 Тіл / Язык / Language",
+        "login_title": "🔐 SmartTest — Мұғалімнің жеке кабинетіне кіру",
+        "login_desc": "Платформаға кіру үшін логиніңіз бен құпия сөзіңізді енгізіңіз.",
+        "username": "Логин (Username)",
+        "username_ph": "Мысалы: zoya",
+        "password": "Құпия сөз (Password)",
+        "password_ph": "Құпия сөз...",
+        "login_btn": "Кіру",
+        "welcome": "Қош келдіңіз",
+        "login_err": "Логин немесе құпия сөз қате!",
+        "user_lbl": "Қолданушы",
+        "balance_lbl": "💳 Сіздің балансыңыз",
+        "credit_unit": "кредит",
+        "section_lbl": "Бөлім",
+        "logout_btn": "🚪 Жүйеден шығу",
+        "app_title": "📄 SmartTest — Автоматты түрде тексеру жүйесі",
+        "menu_home": "Басты бет",
+        "menu_check": "Жұмысты тексеру",
+        "menu_approve": "Мұғалім бекітуі",
+        "menu_results": "Нәтижелер",
+        "menu_stats": "Статистика",
+        "menu_billing": "Балансты толтыру",
+        "menu_security": "Қауіпсіздік",
+        "home_desc": "Оқушы жұмыстарын ҚР білім беру стандартына сай автоматты түрде тексеруге арналған платформа.",
+        "pending_metric": "Мұғалім тексеруін күтуде",
+        "approved_metric": "Бекітілген жұмыс",
+        "check_sub": "Оқушы жұмыстарын жүктеу және автоматты тексеру",
+        "max_score_lbl": "Ең жоғары балл (Шкала)",
+        "upload_lbl": "Оқушылардың жұмыс файлдарын жүктеу (JPG, PNG, PDF)",
+        "uploaded_ok": "Барлығы {} файл жүктелді. Төменде әр оқушының аты-жөнін енгізіңіз.",
+        "bulk_check_btn": "⚡ Барлық жұмысты бірден тексеру",
+        "all_checked_info": "ℹ️ Барлық жүктелген жұмыстар тексеріліп қойған.",
+        "no_credits_bulk": "❌ Барлық {} жұмысты тексеру үшін {} кредит қажет (Сізде: {} кредит).",
+        "checking_progress": "⏳ Тексерілуде ({}/{}): **{}**...",
+        "bulk_check_done": "✅ Барлық жұмыстар сәтті тексерілді!",
+        "bulk_save_btn": "💾 Барлығын бірден сақтау",
+        "missing_names_err": "❌ Келесі жұмыстарға оқушы аты-жөні енгізілмеген: {}",
+        "bulk_save_done": "✅ Барлығы {} оқушының нәтижесі сәтті сақталды! Енді «Мұғалім бекітуі» бөлімінен бекіте аласыз.",
+        "status_checked": "✅ Тексерілді",
+        "status_pending": "⏳ Күтілуде",
+        "work_lbl": "Жұмыс №",
+        "pdf_loaded": "📄 PDF форматындағы документ жүктелді.",
+        "img_err": "Суретті ашу мүмкін болмады.",
+        "student_name_lbl": "👤 Оқушының аты-жөнін енгізіңіз *",
+        "student_name_ph": "Мысалы: Асанов Алихан",
+        "single_check_btn": "🟢 Автоматты тексеру",
+        "no_credits_err": "❌ Балансыңызда кредит жеткіліксіз!",
+        "ai_spinner": "ЖИ ҚР білім стандартына сәйкес жұмысты толық талдап жатыр...",
+        "single_check_ok": "✅ Жұмыс стандартқа сай сәтті тексерілді!",
+        "analysis_res_hdr": "### 🎨 Талдау нәтижесі:",
+        "check_hint": "ℹ️ Оқушының аты-жөнін жазып, **🟢 Автоматты тексеру** немесе жоғарыдағы **⚡ Барлық жұмысты бірден тексеру** батырмасын басыңыз.",
+        "score_input_lbl": "Жалпы жинаған ұпай саны",
+        "feedback_lbl": "Толық кері байланыс мәтіні",
+        "save_btn": "💾 Нәтижені сақтау",
+        "save_ok": "✅ {} нәтижесі сәтті сақталды!",
+        "save_name_err": "❌ Сақтау үшін жоғарыдағы өріске оқушының аты-жөнін міндетті түрде енгізіңіз!",
+        "approve_sub": "Мұғалімнің қорытынды бағасын бекіту",
+        "no_pending": "Бекітуді күтіп тұрған жұмыс жоқ.",
+        "pending_count": "Бекітуді күтіп тұрған жұмыстар саны:",
+        "bulk_approve_btn": "✅ Барлығын бірден бекіту",
+        "bulk_approve_ok": "✅ Барлық жұмыстар сәтті бекітілді!",
+        "approve_score_lbl": "Бекітілетін ұпай",
+        "comment_lbl": "Ескертпе (міндетті емес)",
+        "comment_ph": "Қажет болса, қосымша пікір қалдырыңыз...",
+        "approve_btn": "Бекіту",
+        "results_sub": "Мұғалім бекіткен нәтижелер",
+        "no_results": "Әзірге нәтиже жоқ.",
+        "stats_sub": "📊 Сыныптың статистикасы мен педагогикалық талдау",
+        "no_stats": "Әзірге бекітілген нәтижелер жоқ. Статистика шығару үшін жұмыстарды тексеріп, бекітіңіз.",
+        "col_student": "Оқушы аты-жөні",
+        "col_score": "Бекітілген ұпай",
+        "col_max": "Максималды балл",
+        "col_fb": "Кері байланыс",
+        "col_pct": "Пайыздық көрсеткіш (%)",
+        "m_students": "Оқушы саны",
+        "m_avg": "Орташа балл",
+        "m_pass": "Үлгерім пайызы",
+        "m_qual": "Сапа пайызы",
+        "chart_hdr": "### 📈 Оқушылардың аты-жөні бойынша ұпайлары",
+        "ai_ped_hdr": "### 🧠 Оқу мақсаттары бойынша автоматты педагогикалық талдау",
+        "ai_ped_desc": "БЖБ / ТЖБ қорытынды анықтамасына арналған дайын талдау мәтінін құрастыру:",
+        "ai_ped_btn": "🤖 Қол жеткізген және қиындық туғызған мақсаттарды талдау",
+        "ai_ped_spin": "ЖИ барлық оқушылардың қателері мен жетістіктерін қорытындылап жатыр...",
+        "copy_area_lbl": "Көшіріп алуға ыңғайлы мәтін (Word / Kundelik / BilimClass үшін):",
+        "export_hdr": "### 📥 Есепті жүктеп алу",
+        "excel_btn": "📊 Толық есепті Excel форматында жүктеу (.xlsx)",
+        "billing_sub": "💳 Кредит сатып алу және балансты толтыру",
+        "billing_desc": "1 кредит = 100 ₸. Қалаған кредит санын енгізіп, төлем жасаңыз.",
+        "credits_buy_lbl": "Сатып алғыңыз келетін кредит саны:",
+        "total_pay_lbl": "Төленетін жалпы сома:",
+        "pay_steps": "📱 **Төлем жасау қадамдары:**\n1. Төмендегі QR кодтардың бірін сканерлеңіз;\n2. Соманы аударыңыз;\n3. Төлем чегіндегі транзакция / чек нөмірін енгізіңіз.",
+        "txn_hdr": "### Төлемді растау үшін деректерді енгізіңіз:",
+        "txn_lbl": "Транзакция / чек нөмірі",
+        "txn_ph": "Операция нөмірін жазыңыз...",
+        "txn_btn": "📤 Төлем туралы хабарлау",
+        "txn_err": "❌ Дұрыс транзакция нөмірін енгізіңіз!",
+        "txn_ok": "✅ Өтінім қабылданды! Тексерілгеннен кейін балансыңызға {} кредит қосылады.",
+        "sec_sub": "Қауіпсіздік және жүйе күйі",
+        "sec_denied": "⛔ Бұл бетке тек әкімші (admin) ғана кіре алады!"
+    },
+    "РУС": {
+        "lang_label": "🌐 Тіл / Язык / Language",
+        "login_title": "🔐 SmartTest — Вход в личный кабинет учителя",
+        "login_desc": "Введите ваш логин и пароль для входа на платформу.",
+        "username": "Логин (Username)",
+        "username_ph": "Например: zoya",
+        "password": "Пароль (Password)",
+        "password_ph": "Пароль...",
+        "login_btn": "Войти",
+        "welcome": "Добро пожаловать",
+        "login_err": "Неверный логин или пароль!",
+        "user_lbl": "Пользователь",
+        "balance_lbl": "💳 Ваш баланс",
+        "credit_unit": "кредитов",
+        "section_lbl": "Раздел",
+        "logout_btn": "🚪 Выйти из системы",
+        "app_title": "📄 SmartTest — Система автоматической проверки",
+        "menu_home": "Главная",
+        "menu_check": "Проверка работ",
+        "menu_approve": "Утверждение учителем",
+        "menu_results": "Результаты",
+        "menu_stats": "Статистика",
+        "menu_billing": "Пополнить баланс",
+        "menu_security": "Безопасность",
+        "home_desc": "Платформа для автоматической проверки работ учащихся в соответствии со стандартами образования РК.",
+        "pending_metric": "Ожидают проверки учителя",
+        "approved_metric": "Утвержденные работы",
+        "check_sub": "Загрузка и автоматическая проверка работ учащихся",
+        "max_score_lbl": "Максимальный балл (Шкала)",
+        "upload_lbl": "Загрузить файлы работ учащихся (JPG, PNG, PDF)",
+        "uploaded_ok": "Всего загружено файлов: {}. Введите ФИО каждого ученика ниже.",
+        "bulk_check_btn": "⚡ Проверить все работы сразу",
+        "all_checked_info": "ℹ️ Все загруженные работы уже проверены.",
+        "no_credits_bulk": "❌ Для проверки всех {} работ необходимо {} кредитов (У вас: {} кредитов).",
+        "checking_progress": "⏳ Проверяется ({}/{}): **{}**...",
+        "bulk_check_done": "✅ Все работы успешно проверены!",
+        "bulk_save_btn": "💾 Сохранить все сразу",
+        "missing_names_err": "❌ Не указано ФИО ученика для следующих работ: {}",
+        "bulk_save_done": "✅ Результаты {} учащихся успешно сохранены! Теперь вы можете утвердить их в разделе «Утверждение учителем».",
+        "status_checked": "✅ Проверено",
+        "status_pending": "⏳ Ожидает",
+        "work_lbl": "Работа №",
+        "pdf_loaded": "📄 Загружен документ в формате PDF.",
+        "img_err": "Не удалось открыть изображение.",
+        "student_name_lbl": "👤 Введите ФИО ученика *",
+        "student_name_ph": "Например: Асанов Алихан",
+        "single_check_btn": "🟢 Автоматическая проверка",
+        "no_credits_err": "❌ Недостаточно кредитов на балансе!",
+        "ai_spinner": "ИИ анализирует работу согласно стандартам образования РК...",
+        "single_check_ok": "✅ Работа успешно проверена по стандарту!",
+        "analysis_res_hdr": "### 🎨 Результат анализа:",
+        "check_hint": "ℹ️ Введите ФИО ученика и нажмите **🟢 Автоматическая проверка** или **⚡ Проверить все работы сразу** выше.",
+        "score_input_lbl": "Общий набранный балл",
+        "feedback_lbl": "Полный текст обратной связи",
+        "save_btn": "💾 Сохранить результат",
+        "save_ok": "✅ Результат ученика {} успешно сохранен!",
+        "save_name_err": "❌ Для сохранения обязательно введите ФИО ученика в поле выше!",
+        "approve_sub": "Утверждение итоговой оценки учителем",
+        "no_pending": "Нет работ, ожидающих утверждения.",
+        "pending_count": "Количество работ, ожидающих утверждения:",
+        "bulk_approve_btn": "✅ Утвердить все сразу",
+        "bulk_approve_ok": "✅ Все работы успешно утверждены!",
+        "approve_score_lbl": "Утверждаемый балл",
+        "comment_lbl": "Примечание (необязательно)",
+        "comment_ph": "При необходимости оставьте комментарий...",
+        "approve_btn": "Утвердить",
+        "results_sub": "Результаты, утвержденные учителем",
+        "no_results": "Пока нет результатов.",
+        "stats_sub": "📊 Статистика класса и педагогический анализ",
+        "no_stats": "Пока нет утвержденных результатов. Для вывода статистики проверьте и утвердите работы.",
+        "col_student": "ФИО ученика",
+        "col_score": "Утвержденный балл",
+        "col_max": "Максимальный балл",
+        "col_fb": "Обратная связь",
+        "col_pct": "Процентный показатель (%)",
+        "m_students": "Количество учеников",
+        "m_avg": "Средний балл",
+        "m_pass": "Процент успеваемости",
+        "m_qual": "Качество знаний",
+        "chart_hdr": "### 📈 Баллы по ФИО учащихся",
+        "ai_ped_hdr": "### 🧠 Автоматический педагогический анализ по целям обучения",
+        "ai_ped_desc": "Формирование готового текста анализа для итоговой справки СОР / СОЧ:",
+        "ai_ped_btn": "🤖 Анализ достигнутых и вызвавших затруднения целей",
+        "ai_ped_spin": "ИИ обобщает ошибки и достижения всех учащихся...",
+        "copy_area_lbl": "Удобный для копирования текст (для Word / Kundelik / BilimClass):",
+        "export_hdr": "### 📥 Скачать отчет",
+        "excel_btn": "📊 Скачать полный отчет в формате Excel (.xlsx)",
+        "billing_sub": "💳 Покупка кредитов и пополнение баланса",
+        "billing_desc": "1 кредит = 100 ₸. Укажите желаемое количество кредитов и произведите оплату.",
+        "credits_buy_lbl": "Количество кредитов для покупки:",
+        "total_pay_lbl": "Общая сумма к оплате:",
+        "pay_steps": "📱 **Шаги оплаты:**\n1. Отсканируйте один из QR-кодов ниже;\n2. Переведите сумму;\n3. Введите номер транзакции / чека.",
+        "txn_hdr": "### Введите данные для подтверждения оплаты:",
+        "txn_lbl": "Номер транзакции / чека",
+        "txn_ph": "Введите номер операции...",
+        "txn_btn": "📤 Сообщить об оплате",
+        "txn_err": "❌ Введите корректный номер транзакции!",
+        "txn_ok": "✅ Заявка принята! После проверки на ваш баланс будет начислено {} кредитов.",
+        "sec_sub": "Безопасность и состояние системы",
+        "sec_denied": "⛔ Доступ к этой странице разрешен только администратору (admin)!"
+    },
+    "ENG": {
+        "lang_label": "🌐 Тіл / Язык / Language",
+        "login_title": "🔐 SmartTest — Teacher's Personal Cabinet",
+        "login_desc": "Enter your username and password to access the platform.",
+        "username": "Username",
+        "username_ph": "e.g., zoya",
+        "password": "Password",
+        "password_ph": "Password...",
+        "login_btn": "Login",
+        "welcome": "Welcome",
+        "login_err": "Invalid username or password!",
+        "user_lbl": "User",
+        "balance_lbl": "💳 Your Balance",
+        "credit_unit": "credits",
+        "section_lbl": "Section",
+        "logout_btn": "🚪 Logout",
+        "app_title": "📄 SmartTest — Automated Grading System",
+        "menu_home": "Home",
+        "menu_check": "Grade Works",
+        "menu_approve": "Teacher Approval",
+        "menu_results": "Results",
+        "menu_stats": "Statistics",
+        "menu_billing": "Top Up Balance",
+        "menu_security": "Security",
+        "home_desc": "Automated grading platform aligned with the Educational Standards of the Republic of Kazakhstan.",
+        "pending_metric": "Pending Teacher Review",
+        "approved_metric": "Approved Works",
+        "check_sub": "Upload and Automatically Grade Student Works",
+        "max_score_lbl": "Maximum Score (Scale)",
+        "upload_lbl": "Upload student work files (JPG, PNG, PDF)",
+        "uploaded_ok": "Total {} files uploaded. Enter each student's full name below.",
+        "bulk_check_btn": "⚡ Grade All Works at Once",
+        "all_checked_info": "ℹ️ All uploaded works have already been graded.",
+        "no_credits_bulk": "❌ {} credits are required to grade all {} works (Your balance: {} credits).",
+        "checking_progress": "⏳ Grading ({}/{}): **{}**...",
+        "bulk_check_done": "✅ All works have been successfully graded!",
+        "bulk_save_btn": "💾 Save All at Once",
+        "missing_names_err": "❌ Student name is missing for: {}",
+        "bulk_save_done": "✅ Results for {} students saved! You can now approve them in the 'Teacher Approval' tab.",
+        "status_checked": "✅ Graded",
+        "status_pending": "⏳ Pending",
+        "work_lbl": "Work #",
+        "pdf_loaded": "📄 PDF document uploaded.",
+        "img_err": "Unable to open image.",
+        "student_name_lbl": "👤 Enter Student Full Name *",
+        "student_name_ph": "e.g., Alikhan Asanov",
+        "single_check_btn": "🟢 Auto Grade",
+        "no_credits_err": "❌ Insufficient credits in your balance!",
+        "ai_spinner": "AI is analyzing the work according to RK educational standards...",
+        "single_check_ok": "✅ Work successfully graded according to standards!",
+        "analysis_res_hdr": "### 🎨 Analysis Result:",
+        "check_hint": "ℹ️ Enter the student's name and click **🟢 Auto Grade** or **⚡ Grade All Works at Once** above.",
+        "score_input_lbl": "Total Score Earned",
+        "feedback_lbl": "Full Feedback Text",
+        "save_btn": "💾 Save Result",
+        "save_ok": "✅ Result for {} saved successfully!",
+        "save_name_err": "❌ Please enter the student's full name in the field above before saving!",
+        "approve_sub": "Final Grade Approval by Teacher",
+        "no_pending": "No works awaiting approval.",
+        "pending_count": "Works awaiting approval:",
+        "bulk_approve_btn": "✅ Approve All at Once",
+        "bulk_approve_ok": "✅ All works have been successfully approved!",
+        "approve_score_lbl": "Approved Score",
+        "comment_lbl": "Note (optional)",
+        "comment_ph": "Add an optional comment if needed...",
+        "approve_btn": "Approve",
+        "results_sub": "Teacher-Approved Results",
+        "no_results": "No results yet.",
+        "stats_sub": "📊 Class Statistics and Pedagogical Analysis",
+        "no_stats": "No approved results yet. Grade and approve works to view statistics.",
+        "col_student": "Student Full Name",
+        "col_score": "Approved Score",
+        "col_max": "Max Score",
+        "col_fb": "Feedback",
+        "col_pct": "Percentage (%)",
+        "m_students": "Students Count",
+        "m_avg": "Average Score",
+        "m_pass": "Passing Rate",
+        "m_qual": "Quality Rate",
+        "chart_hdr": "### 📈 Scores by Student Name",
+        "ai_ped_hdr": "### 🧠 Automated Pedagogical Analysis by Learning Objectives",
+        "ai_ped_desc": "Generate a ready-to-use analytical report for BJB / TJB (summative assessments):",
+        "ai_ped_btn": "🤖 Analyze Achieved & Challenging Objectives",
+        "ai_ped_spin": "AI is summarizing errors and achievements across all students...",
+        "copy_area_lbl": "Copy-ready text (for Word / Kundelik / BilimClass):",
+        "export_hdr": "### 📥 Download Report",
+        "excel_btn": "📊 Download Full Report in Excel (.xlsx)",
+        "billing_sub": "💳 Buy Credits and Top Up Balance",
+        "billing_desc": "1 credit = 100 ₸. Enter the desired number of credits and complete payment.",
+        "credits_buy_lbl": "Number of credits to buy:",
+        "total_pay_lbl": "Total amount payable:",
+        "pay_steps": "📱 **Payment Steps:**\n1. Scan one of the QR codes below;\n2. Transfer the exact amount;\n3. Enter the transaction / receipt ID.",
+        "txn_hdr": "### Enter details to verify payment:",
+        "txn_lbl": "Transaction / Receipt ID",
+        "txn_ph": "Enter operation number...",
+        "txn_btn": "📤 Submit Payment Info",
+        "txn_err": "❌ Please enter a valid transaction ID!",
+        "txn_ok": "✅ Request received! {} credits will be added to your balance after verification.",
+        "sec_sub": "Security & System Status",
+        "sec_denied": "⛔ Access to this page is restricted to administrators only!"
+    }
+}
+
+if "lang" not in st.session_state:
+    st.session_state.lang = "ҚАЗ"
+
+def t(key):
+    return TRANSLATIONS[st.session_state.lang].get(key, key)
+
 # --- ЗАМАНАУИ МИНИМАЛИЗМ CSS СТИЛЬДЕРІ МЕН БЕЛГІЛЕР ---
 st.markdown("""
 <style>
@@ -123,10 +436,44 @@ def process_uploaded_file(uploaded_file):
         
     return images_b64
 
-# --- ЖИ АРҚЫЛЫ БІР ЖҰМЫСТЫ ТЕКСЕРУ ФУНКЦИЯСЫ ---
-def evaluate_single_work(client, uploaded_file, max_score):
+# --- ЖИ АРҚЫЛЫ БІР ЖҰМЫСТЫ ТЕКСЕРУ ФУНКЦИЯСЫ (ТАҢДАЛҒАН ТІЛДЕ) ---
+def evaluate_single_work(client, uploaded_file, max_score, lang_code):
     images_b64 = process_uploaded_file(uploaded_file)
-    prompt_text = f"""
+    
+    if lang_code == "РУС":
+        prompt_text = f"""
+Ты — опытный учитель-эксперт, досконально знающий государственные стандарты образования Республики Казахстан и систему критериального оценивания (приказы №399, №125 и №348).
+Внимательно изучи письменную работу ученика на изображении. Определи все задания и подпункты и проверь каждый отдельно.
+
+ПРАВИЛА ОФОРМЛЕНИЯ:
+1. Используй ту же нумерацию/буквы, что и в работе ученика.
+2. Кратко укажи тему или цель обучения каждого задания и поставь отметку:
+   - 🟢 [Верно] — если ответ полностью правильный.
+   - 🔴 [Ошибка] — если ответ неверный или задание не выполнено.
+   - 🟡 [Частично] — если ответ верен частично.
+3. Кратко объясни причину каждой оценки на русском языке.
+4. В самом конце обязательно напиши в точном формате:
+   Итоговый балл: X/{int(max_score)}
+"""
+        sys_msg = "Вы эксперт-учитель, проверяющий работы учащихся по стандартам образования РК на русском языке."
+    elif lang_code == "ENG":
+        prompt_text = f"""
+You are an experienced expert teacher well-versed in the State Educational Standards of the Republic of Kazakhstan and the criteria-based assessment system (Orders No. 399, No. 125, and No. 348).
+Carefully examine the student's written work in the image. Identify all tasks and sub-items and grade each one individually.
+
+GRADING & FORMATTING RULES:
+1. Keep the same numbering/lettering as written in the student's work.
+2. Briefly state the topic or learning objective of each task and assign a status tag:
+   - 🟢 [Correct] — if the answer is completely correct.
+   - 🔴 [Incorrect] — if the answer is wrong or missing.
+   - 🟡 [Partial] — if the answer is partially correct.
+3. Briefly explain the reason for each grade in English.
+4. At the very end, strictly write in this exact format:
+   Total score: X/{int(max_score)}
+"""
+        sys_msg = "You are an expert teacher grading student works according to RK educational standards in English."
+    else:
+        prompt_text = f"""
 Сен — Қазақстан Республикасының орта білім беру стандарты мен критериалды бағалау жүйесін жеттік білетін тәжірибелі сарапшы-ұстазсың. №399, №125 және №348 бұйрықтардың талаптары мен дескрипторларды қатаң басшылыққа ал.
 Суреттегі оқушының жазбаша жұмысын өте мұқият оқып шық. Жұмыстағы барлық тапсырмалар мен тармақтарды анықтап, жеке-жеке тексер.
 
@@ -139,11 +486,9 @@ def evaluate_single_work(client, uploaded_file, max_score):
 3. Әр бағалаудың себебін қысқаша түсіндіріп жаз.
 4. Соңында міндетті түрде мына форматта жаз:
    Жиынтық балл: X/{int(max_score)}
-
-ФОРМАТ ТАЛАБЫ:
-1. Барлық тапсырмаларды жеке жолдармен сипаттап шық.
-2. Соңында 'Жиынтық балл: X/{int(max_score)}' түрінде көрсет.
 """
+        sys_msg = "Сіз ҚР білім беру стандартына сай оқушы жұмыстарын тексеретін ұстазсыз."
+
     messages_content = [{"type": "text", "text": prompt_text}]
     for img_b64 in images_b64:
         messages_content.append({
@@ -154,7 +499,7 @@ def evaluate_single_work(client, uploaded_file, max_score):
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
-            {"role": "system", "content": "Сіз ҚР білім беру стандартына сай оқушы жұмыстарын тексеретін ұстазсыз."},
+            {"role": "system", "content": sys_msg},
             {"role": "user", "content": messages_content}
         ],
         max_tokens=2500,
@@ -165,7 +510,7 @@ def evaluate_single_work(client, uploaded_file, max_score):
     full_ai_resp = re.sub(r'\[ОҚУШЫ_АТЫ\].*?\[/ОҚУШЫ_АТЫ\]', '', full_ai_resp).strip()
     
     extracted_score = 0.0
-    score_match = re.search(r'Жиынтық балл:\s*([\d\.]+)', full_ai_resp, re.IGNORECASE)
+    score_match = re.search(r'(?:Жиынтық балл|Итоговый балл|Total score):\s*([\d\.]+)', full_ai_resp, re.IGNORECASE)
     if score_match:
         try:
             val = float(score_match.group(1))
@@ -183,13 +528,27 @@ if "username" not in st.session_state:
     st.session_state.username = ""
 
 if not st.session_state.authenticated:
-    st.title("🔐 SmartTest — Мұғалімнің жеке кабинетіне кіру")
-    st.write("Платформаға кіру үшін логиніңіз бен құпия сөзіңізді енгізіңіз.")
+    # Кіру бетіндегі 3 тілді ауыстырғыш түйме
+    lang_col1, lang_col2 = st.columns([3, 1])
+    with lang_col2:
+        selected_login_lang = st.radio(
+            t("lang_label"),
+            ["ҚАЗ", "РУС", "ENG"],
+            index=["ҚАЗ", "РУС", "ENG"].index(st.session_state.lang),
+            horizontal=True,
+            key="login_lang_selector"
+        )
+        if selected_login_lang != st.session_state.lang:
+            st.session_state.lang = selected_login_lang
+            st.rerun()
+
+    st.title(t("login_title"))
+    st.write(t("login_desc"))
     
     with st.form("login_form"):
-        username_input = st.text_input("Логин (Username)", placeholder="Мысалы: zoya")
-        password_input = st.text_input("Құпия сөз (Password)", type="password", placeholder="Құпия сөз...")
-        if st.form_submit_button("Кіру"):
+        username_input = st.text_input(t("username"), placeholder=t("username_ph"))
+        password_input = st.text_input(t("password"), type="password", placeholder=t("password_ph"))
+        if st.form_submit_button(t("login_btn")):
             user = verify_user(username_input, password_input)
             if not user:
                 secrets_passwords = st.secrets.get("passwords", {})
@@ -199,10 +558,10 @@ if not st.session_state.authenticated:
             if user:
                 st.session_state.authenticated = True
                 st.session_state.username = user["username"]
-                st.success(f"Қош келдіңіз, {user.get('full_name', user['username'])}!")
+                st.success(f"{t('welcome')}, {user.get('full_name', user['username'])}!")
                 st.rerun()
             else:
-                st.error("Логин немесе құпия сөз қате!")
+                st.error(t("login_err"))
     st.stop()
 
 # --- НЕГІЗГІ ҚОСЫМША ---
@@ -216,109 +575,126 @@ total_tenge = user_balance * price_per_credit
 user_role = get_user_role(current_user)
 is_admin = (user_role == "admin" or current_user.lower() in ["zoya", "admin"])
 
+# Бүйірлік панельдегі 3 тілді ауыстырғыш түйме
 st.sidebar.title("SmartTest")
-st.sidebar.markdown(f"👤 **Қолданушы:** {current_user}")
-st.sidebar.metric(label="💳 Сіздің балансыңыз", value=f"{user_balance} кредит", delta=f"{total_tenge:,.0f} ₸")
+selected_sidebar_lang = st.sidebar.radio(
+    t("lang_label"),
+    ["ҚАЗ", "РУС", "ENG"],
+    index=["ҚАЗ", "РУС", "ENG"].index(st.session_state.lang),
+    horizontal=True,
+    key="sidebar_lang_selector"
+)
+if selected_sidebar_lang != st.session_state.lang:
+    st.session_state.lang = selected_sidebar_lang
+    st.rerun()
+
+st.sidebar.markdown("---")
+st.sidebar.markdown(f"👤 **{t('user_lbl')}:** {current_user}")
+st.sidebar.metric(label=t("balance_lbl"), value=f"{user_balance} {t('credit_unit')}", delta=f"{total_tenge:,.0f} ₸")
 st.sidebar.markdown("---")
 
+# Мәзір кілттері (тіл ауысқанда таңдалған бет жоғалып кетпеуі үшін)
+menu_keys = ["menu_home", "menu_check", "menu_approve", "menu_results", "menu_stats", "menu_billing"]
 if is_admin:
-    menu_options = ["Басты бет", "Жұмысты тексеру", "Мұғалім бекітуі", "Нәтижелер", "Статистика", "Балансты толтыру", "Қауіпсіздік"]
-else:
-    menu_options = ["Басты бет", "Жұмысты тексеру", "Мұғалім бекітуі", "Нәтижелер", "Статистика", "Балансты толтыру"]
+    menu_keys.append("menu_security")
 
-menu = st.sidebar.selectbox("Бөлім", menu_options)
+selected_menu_key = st.sidebar.selectbox(
+    t("section_lbl"),
+    menu_keys,
+    format_func=lambda k: t(k)
+)
 
-if st.sidebar.button("🚪 Жүйеден шығу"):
+if st.sidebar.button(t("logout_btn")):
     st.session_state.authenticated = False
     st.session_state.username = ""
     st.rerun()
 
-st.title("📄 SmartTest — Автоматты түрде тексеру жүйесі")
+st.title(t("app_title"))
 
-if menu == "Басты бет":
-    st.write("Оқушы жұмыстарын ҚР білім беру стандартына сай автоматты түрде тексеруге арналған платформа.")
+if selected_menu_key == "menu_home":
+    st.write(t("home_desc"))
     c1, c2 = st.columns(2)
-    c1.metric("Мұғалім тексеруін күтуде", len(get_pending_results()))
-    c2.metric("Бекітілген жұмыс", len(get_approved_results()))
+    c1.metric(t("pending_metric"), len(get_pending_results()))
+    c2.metric(t("approved_metric"), len(get_approved_results()))
 
-elif menu == "Жұмысты тексеру":
-    st.subheader("Оқушы жұмыстарын жүктеу және автоматты тексеру")
+elif selected_menu_key == "menu_check":
+    st.subheader(t("check_sub"))
     
     max_score = st.number_input(
-        "Ең жоғары балл (Шкала)", 
+        t("max_score_lbl"), 
         min_value=1.0, 
         max_value=50.0, 
         value=10.0, 
         step=1.0
     )
 
-    uploaded_files = st.file_uploader("Оқушылардың жұмыс файлдарын жүктеу (JPG, PNG, PDF)", type=["jpg", "jpeg", "png", "pdf"], accept_multiple_files=True)
+    uploaded_files = st.file_uploader(t("upload_lbl"), type=["jpg", "jpeg", "png", "pdf"], accept_multiple_files=True)
     
     if uploaded_files:
-        st.success(f"Барлығы {len(uploaded_files)} файл жүктелді. Төменде әр оқушының аты-жөнін енгізіңіз.")
+        st.success(t("uploaded_ok").format(len(uploaded_files)))
         
         # --- ЖАППАЙ ТЕКСЕРУ ЖӘНЕ САҚТАУ БАТЫРМАЛАРЫ ---
         bulk_col1, bulk_col2 = st.columns(2)
         with bulk_col1:
-            if st.button("⚡ Барлық жұмысты бірден тексеру", use_container_width=True):
+            if st.button(t("bulk_check_btn"), use_container_width=True):
                 unchecked_indices = [
                     i for i, f in enumerate(uploaded_files) 
                     if not st.session_state.get(f"ai_result_{i}_{f.name}", "")
                 ]
                 if not unchecked_indices:
-                    st.info("ℹ️ Барлық жүктелген жұмыстар тексеріліп қойған.")
+                    st.info(t("all_checked_info"))
                 else:
                     current_balance = get_user_credits(current_user)
                     needed_credits = float(len(unchecked_indices))
                     if not is_admin and current_balance < needed_credits:
-                        st.error(f"❌ Барлық {len(unchecked_indices)} жұмысты тексеру үшін {int(needed_credits)} кредит қажет (Сізде: {int(current_balance)} кредит).")
+                        st.error(t("no_credits_bulk").format(len(unchecked_indices), int(needed_credits), int(current_balance)))
                     else:
                         progress_bar = st.progress(0)
                         status_text = st.empty()
                         for step_num, idx in enumerate(unchecked_indices):
                             f = uploaded_files[idx]
-                            st_name_preview = st.session_state.get(f"name_input_{idx}_{f.name}", f"Жұмыс №{idx+1}").strip() or f"Жұмыс №{idx+1}"
-                            status_text.info(f"⏳ Тексерілуде ({step_num+1}/{len(unchecked_indices)}): **{st_name_preview}**...")
+                            st_name_preview = st.session_state.get(f"name_input_{idx}_{f.name}", f"{t('work_lbl')}{idx+1}").strip() or f"{t('work_lbl')}{idx+1}"
+                            status_text.info(t("checking_progress").format(step_num+1, len(unchecked_indices), st_name_preview))
                             try:
-                                ai_resp, sc = evaluate_single_work(client, f, max_score)
+                                ai_resp, sc = evaluate_single_work(client, f, max_score, st.session_state.lang)
                                 st.session_state[f"ai_result_{idx}_{f.name}"] = ai_resp
                                 st.session_state[f"exp_text_{idx}_{f.name}"] = ai_resp
                                 st.session_state[f"score_{idx}_{f.name}"] = sc
                                 if not is_admin:
                                     deduct_credit(current_user, amount=1.0)
                             except Exception as e:
-                                st.error(f"Қате ({f.name}): {e}")
+                                st.error(f"Error ({f.name}): {e}")
                             progress_bar.progress((step_num + 1) / len(unchecked_indices))
-                        status_text.success("✅ Барлық жұмыстар сәтті тексерілді!")
+                        status_text.success(t("bulk_check_done"))
                         st.rerun()
 
         with bulk_col2:
-            if st.button("💾 Барлығын бірден сақтау", use_container_width=True):
+            if st.button(t("bulk_save_btn"), use_container_width=True):
                 missing_names = []
                 saved_count = 0
                 for idx, f in enumerate(uploaded_files):
                     st_name = st.session_state.get(f"name_input_{idx}_{f.name}", "").strip()
                     if not st_name:
-                        missing_names.append(f"Жұмыс №{idx+1} ({f.name})")
+                        missing_names.append(f"{t('work_lbl')}{idx+1} ({f.name})")
                 
                 if missing_names:
-                    st.error(f"❌ Келесі жұмыстарға оқушы аты-жөні енгізілмеген: {', '.join(missing_names)}")
+                    st.error(t("missing_names_err").format(', '.join(missing_names)))
                 else:
                     for idx, f in enumerate(uploaded_files):
                         st_name = st.session_state.get(f"name_input_{idx}_{f.name}", "").strip()
                         sc = float(st.session_state.get(f"score_{idx}_{f.name}", 0.0))
                         exp_txt = st.session_state.get(f"exp_text_{idx}_{f.name}", "").strip()
-                        full_feedback = f"Кері байланыс:\n{exp_txt}"
+                        full_feedback = f"Кері байланыс / Feedback:\n{exp_txt}"
                         save_pending_result(
                             st_name,
-                            "[Автоматты тексеру] Оқушы жұмысы",
-                            "ҚР стандарттары бойынша критериалды бағалау",
+                            "[SmartTest] Student Work",
+                            "RK Educational Standards Assessment",
                             sc,
                             float(max_score),
                             full_feedback
                         )
                         saved_count += 1
-                    st.success(f"✅ Барлығы {saved_count} оқушының нәтижесі сәтті сақталды! Енді «Мұғалім бекітуі» бөлімінен бекіте аласыз.")
+                    st.success(t("bulk_save_done").format(saved_count))
 
         st.markdown("---")
 
@@ -328,25 +704,25 @@ elif menu == "Жұмысты тексеру":
             current_display_name = st.session_state.get(input_key, "").strip()
             ai_res_key = f"ai_result_{idx}_{uploaded_file.name}"
             is_checked = bool(st.session_state.get(ai_res_key, ""))
-            status_badge = "✅ Тексерілді" if is_checked else "⏳ Күтілуде"
+            status_badge = t("status_checked") if is_checked else t("status_pending")
             
-            expander_title = f"📁 Жұмыс №{idx+1}: {current_display_name if current_display_name else uploaded_file.name} — [{status_badge}]"
+            expander_title = f"📁 {t('work_lbl')}{idx+1}: {current_display_name if current_display_name else uploaded_file.name} — [{status_badge}]"
             
             with st.expander(expander_title, expanded=True):
                 col_img, col_form = st.columns([1, 1])
                 with col_img:
                     if uploaded_file.name.lower().endswith('.pdf'):
-                        st.info("📄 PDF форматындағы документ жүктелді.")
+                        st.info(t("pdf_loaded"))
                     else:
                         try:
                             image = Image.open(uploaded_file)
                             st.image(image, caption=uploaded_file.name, use_container_width=True)
                         except Exception:
-                            st.error("Суретті ашу мүмкін болмады.")
+                            st.error(t("img_err"))
                 with col_form:
                     st_code = st.text_input(
-                        "👤 Оқушының аты-жөнін енгізіңіз *", 
-                        placeholder="Мысалы: Асанов Алихан", 
+                        t("student_name_lbl"), 
+                        placeholder=t("student_name_ph"), 
                         key=input_key
                     )
                     
@@ -354,46 +730,46 @@ elif menu == "Жұмысты тексеру":
                         st.session_state[ai_res_key] = ""
 
                     # ЖЕКЕ ТЕКСЕРУ БАТЫРМАСЫ
-                    if st.button("🟢 Автоматты тексеру", key=f"ai_btn_{idx}_{uploaded_file.name}"):
+                    if st.button(t("single_check_btn"), key=f"ai_btn_{idx}_{uploaded_file.name}"):
                         current_balance = get_user_credits(current_user)
                         
                         if not is_admin and current_balance < 1.0:
-                            st.error("❌ Балансыңызда кредит жеткіліксіз!")
+                            st.error(t("no_credits_err"))
                         else:
-                            with st.spinner("ЖИ ҚР білім стандартына сәйкес жұмысты толық талдап жатыр..."):
+                            with st.spinner(t("ai_spinner")):
                                 try:
-                                    full_ai_resp, extracted_score = evaluate_single_work(client, uploaded_file, max_score)
+                                    full_ai_resp, extracted_score = evaluate_single_work(client, uploaded_file, max_score, st.session_state.lang)
                                     st.session_state[ai_res_key] = full_ai_resp
                                     st.session_state[f"exp_text_{idx}_{uploaded_file.name}"] = full_ai_resp
                                     st.session_state[f"score_{idx}_{uploaded_file.name}"] = extracted_score
                                     
                                     if not is_admin:
                                         deduct_credit(current_user, amount=1.0)
-                                    st.success("✅ Жұмыс стандартқа сай сәтті тексерілді!")
+                                    st.success(t("single_check_ok"))
                                     st.rerun()
                                 except Exception as e:
-                                    st.error(f"Қате пайда болды: {e}")
+                                    st.error(f"Error: {e}")
 
                     current_ai_text = st.session_state.get(ai_res_key, "")
                     
                     if current_ai_text:
-                        st.markdown("### 🎨 Талдау нәтижесі:")
+                        st.markdown(t("analysis_res_hdr"))
                         lines = current_ai_text.split('\n')
                         for line in lines:
-                            if any(k in line for k in ['🟢', '[Дұрыс]', 'дұрыс']):
+                            if any(k in line for k in ['🟢', '[Дұрыс]', '[Верно]', '[Correct]', 'дұрыс', 'верно', 'correct']):
                                 st.markdown(f"<div class='correct-card'>{line}</div>", unsafe_allow_html=True)
-                            elif any(k in line for k in ['🔴', '[Қате]', 'қате', 'орындалмаған']):
+                            elif any(k in line for k in ['🔴', '[Қате]', '[Ошибка]', '[Incorrect]', 'қате', 'ошибка', 'incorrect']):
                                 st.markdown(f"<div class='incorrect-card'>{line}</div>", unsafe_allow_html=True)
-                            elif any(k in line for k in ['🟡', '[Жартылай]', 'жартылай']):
+                            elif any(k in line for k in ['🟡', '[Жартылай]', '[Частично]', '[Partial]', 'жартылай', 'частично', 'partial']):
                                 st.markdown(f"<div class='warning-card'>{line}</div>", unsafe_allow_html=True)
                             elif line.strip():
                                 st.write(line)
                     else:
-                        st.info("ℹ️ Оқушының аты-жөнін жазып, **🟢 Автоматты тексеру** немесе жоғарыдағы **⚡ Барлық жұмысты бірден тексеру** батырмасын басыңыз.")
+                        st.info(t("check_hint"))
 
                     score_key = f"score_{idx}_{uploaded_file.name}"
                     prop_score = st.number_input(
-                        "Жалпы жинаған ұпай саны", 
+                        t("score_input_lbl"), 
                         min_value=0.0, 
                         max_value=float(max_score), 
                         value=st.session_state.get(score_key, 0.0), 
@@ -406,66 +782,66 @@ elif menu == "Жұмысты тексеру":
                         st.session_state[exp_key] = current_ai_text
 
                     explanation = st.text_area(
-                        "Толық кері байланыс мәтіні", 
+                        t("feedback_lbl"), 
                         value=st.session_state[exp_key], 
                         height=250, 
                         key=exp_key
                     )
                     
-                    if st.button("💾 Нәтижені сақтау", key=f"save_btn_{idx}_{uploaded_file.name}"):
+                    if st.button(t("save_btn"), key=f"save_btn_{idx}_{uploaded_file.name}"):
                         current_st_name = st_code.strip()
                         if current_st_name:
-                            full_feedback = f"Кері байланыс:\n{explanation.strip()}"
+                            full_feedback = f"Кері байланыс / Feedback:\n{explanation.strip()}"
                             save_pending_result(
                                 current_st_name, 
-                                "[Автоматты тексеру] Оқушы жұмысы", 
-                                "ҚР стандарттары бойынша критериалды бағалау", 
+                                "[SmartTest] Student Work", 
+                                "RK Educational Standards Assessment", 
                                 float(prop_score), 
                                 float(max_score), 
                                 full_feedback
                             )
-                            st.success(f"✅ {current_st_name} нәтижесі сәтті сақталды!")
+                            st.success(t("save_ok").format(current_st_name))
                         else:
-                            st.error("❌ Сақтау үшін жоғарыдағы өріске оқушының аты-жөнін міндетті түрде енгізіңіз!")
+                            st.error(t("save_name_err"))
 
-elif menu == "Мұғалім бекітуі":
-    st.subheader("Мұғалімнің қорытынды бағасын бекіту")
+elif selected_menu_key == "menu_approve":
+    st.subheader(t("approve_sub"))
     pending = get_pending_results()
     if not pending:
-        st.info("Бекітуді күтіп тұрған жұмыс жоқ.")
+        st.info(t("no_pending"))
     else:
-        st.write(f"Бекітуді күтіп тұрған жұмыстар саны: **{len(pending)}**")
-        if st.button("✅ Барлығын бірден бекіту"):
+        st.write(f"{t('pending_count')} **{len(pending)}**")
+        if st.button(t("bulk_approve_btn")):
             for item in pending:
                 sc_val = float(st.session_state.get("app_" + str(item["id"]), item["proposed_score"]))
                 com_val = st.session_state.get("com_" + str(item["id"]), "")
                 approve_result(item["id"], sc_val, current_user, com_val)
-            st.success("✅ Барлық жұмыстар сәтті бекітілді!")
+            st.success(t("bulk_approve_ok"))
             st.rerun()
             
         st.markdown("---")
         for item in pending:
-            with st.expander(f"Жұмыс: {item['student_code']} — {item['proposed_score']} балл", expanded=True):
-                score = st.number_input("Бекітілетін ұпай", value=float(item['proposed_score']), key="app_" + str(item["id"]))
-                comment = st.text_area("Ескертпе (міндетті емес)", placeholder="Қажет болса, қосымша пікір қалдырыңыз...", key="com_" + str(item["id"]))
-                if st.button("Бекіту", key="btn_" + str(item["id"])):
+            with st.expander(f"{item['student_code']} — {item['proposed_score']} pts", expanded=True):
+                score = st.number_input(t("approve_score_lbl"), value=float(item['proposed_score']), key="app_" + str(item["id"]))
+                comment = st.text_area(t("comment_lbl"), placeholder=t("comment_ph"), key="com_" + str(item["id"]))
+                if st.button(t("approve_btn"), key="btn_" + str(item["id"])):
                     approve_result(item["id"], score, current_user, comment)
                     st.rerun()
 
-elif menu == "Нәтижелер":
-    st.subheader("Мұғалім бекіткен нәтижелер")
+elif selected_menu_key == "menu_results":
+    st.subheader(t("results_sub"))
     rows = get_approved_results()
     if not rows:
-        st.info("Әзірге нәтиже жоқ.")
+        st.info(t("no_results"))
     else:
         df_res = pd.DataFrame(rows)
         st.dataframe(df_res)
 
-elif menu == "Статистика":
-    st.subheader("📊 Сыныптың статистикасы мен педагогикалық талдау")
+elif selected_menu_key == "menu_stats":
+    st.subheader(t("stats_sub"))
     rows = get_approved_results()
     if not rows:
-        st.info("Әзірге бекітілген нәтижелер жоқ. Статистика шығару үшін жұмыстарды тексеріп, бекітіңіз.")
+        st.info(t("no_stats"))
     else:
         df_stat = pd.DataFrame(rows)
         
@@ -491,22 +867,22 @@ elif menu == "Статистика":
                 score_col = num_cols[0]
                 max_col = None
             else:
-                st.error("Кестеден сандық ұпай деректері табылмады.")
+                st.error("Numeric score columns not found.")
                 st.stop()
                 
             fb_col = max(str_cols, key=lambda c: df_stat[c].astype(str).str.len().mean()) if str_cols else None
             
-            rename_map = {student_col: "Оқушы аты-жөні", score_col: "Бекітілген ұпай"}
+            rename_map = {student_col: t("col_student"), score_col: t("col_score")}
             if max_col is not None:
-                rename_map[max_col] = "Максималды балл"
+                rename_map[max_col] = t("col_max")
             if fb_col is not None and fb_col != student_col:
-                rename_map[fb_col] = "Кері байланыс"
+                rename_map[fb_col] = t("col_fb")
                 
             df_stat = df_stat.rename(columns=rename_map)
-            student_col = "Оқушы аты-жөні"
-            score_col = "Бекітілген ұпай"
-            max_col_name = "Максималды балл" if max_col is not None else None
-            fb_col_name = "Кері байланыс" if (fb_col is not None and fb_col != student_col) else None
+            student_col = t("col_student")
+            score_col = t("col_score")
+            max_col_name = t("col_max") if max_col is not None else None
+            fb_col_name = t("col_fb") if (fb_col is not None and fb_col != student_col) else None
         else:
             score_col = next((c for c in ['teacher_score', 'final_score', 'approved_score', 'score', 'proposed_score'] if c in df_stat.columns), None)
             student_col = next((c for c in ['student_code', 'student_name', 'student'] if c in df_stat.columns), None)
@@ -514,40 +890,41 @@ elif menu == "Статистика":
             fb_col_name = next((c for c in ['feedback', 'explanation', 'rubric', 'teacher_comment'] if c in df_stat.columns), None)
 
             if student_col:
-                df_stat = df_stat.rename(columns={student_col: "Оқушы аты-жөні"})
-                student_col = "Оқушы аты-жөні"
+                df_stat = df_stat.rename(columns={student_col: t("col_student")})
+                student_col = t("col_student")
 
         if not score_col or score_col not in df_stat.columns:
-            st.error("Кестеден ұпай бағаны табылмады.")
+            st.error("Score column not found.")
             st.stop()
 
         df_stat[score_col] = pd.to_numeric(df_stat[score_col], errors='coerce').fillna(0.0)
         
         total_students = len(df_stat)
         avg_score = df_stat[score_col].mean()
+        pct_col_name = t("col_pct")
         
         if max_col_name and max_col_name in df_stat.columns:
             df_stat[max_col_name] = pd.to_numeric(df_stat[max_col_name], errors='coerce').fillna(10.0)
             max_possible = df_stat[max_col_name].mean()
-            df_stat['Пайыздық көрсеткіш (%)'] = (df_stat[score_col] / df_stat[max_col_name].replace(0, 10.0)) * 100
+            df_stat[pct_col_name] = (df_stat[score_col] / df_stat[max_col_name].replace(0, 10.0)) * 100
         else:
             max_possible = 10.0
-            df_stat['Пайыздық көрсеткіш (%)'] = (df_stat[score_col] / max_possible) * 100
+            df_stat[pct_col_name] = (df_stat[score_col] / max_possible) * 100
 
-        passing_count = len(df_stat[df_stat['Пайыздық көрсеткіш (%)'] >= 40])
-        quality_count = len(df_stat[df_stat['Пайыздық көрсеткіш (%)'] >= 65])
+        passing_count = len(df_stat[df_stat[pct_col_name] >= 40])
+        quality_count = len(df_stat[df_stat[pct_col_name] >= 65])
             
         passing_rate = (passing_count / total_students) * 100
         quality_rate = (quality_count / total_students) * 100
 
         col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Оқушы саны", f"{total_students}")
-        col2.metric("Орташа балл", f"{avg_score:.1f} / {max_possible:.0f}")
-        col3.metric("Үлгерім пайызы", f"{passing_rate:.1f}%")
-        col4.metric("Сапа пайызы", f"{quality_rate:.1f}%")
+        col1.metric(t("m_students"), f"{total_students}")
+        col2.metric(t("m_avg"), f"{avg_score:.1f} / {max_possible:.0f}")
+        col3.metric(t("m_pass"), f"{passing_rate:.1f}%")
+        col4.metric(t("m_qual"), f"{quality_rate:.1f}%")
 
         st.markdown("---")
-        st.write("### 📈 Оқушылардың аты-жөні бойынша ұпайлары")
+        st.markdown(t("chart_hdr"))
         if student_col and student_col in df_stat.columns:
             df_stat[student_col] = df_stat[student_col].astype(str)
             if df_stat[student_col].duplicated().any():
@@ -557,32 +934,73 @@ elif menu == "Статистика":
             display_cols = [student_col, score_col]
             if max_col_name:
                 display_cols.append(max_col_name)
-            display_cols.append('Пайыздық көрсеткіш (%)')
+            display_cols.append(pct_col_name)
             st.dataframe(df_stat[display_cols], use_container_width=True)
         else:
             st.bar_chart(df_stat[score_col])
 
         st.markdown("---")
-        st.write("### 🧠 Оқу мақсаттары бойынша автоматты педагогикалық талдау")
-        st.write("БЖБ / ТЖБ қорытынды анықтамасына арналған дайын талдау мәтінін құрастыру:")
+        st.markdown(t("ai_ped_hdr"))
+        st.write(t("ai_ped_desc"))
 
         if "class_ai_analysis" not in st.session_state:
             st.session_state.class_ai_analysis = ""
 
-        if st.button("🤖 Қол жеткізген және қиындық туғызған мақсаттарды талдау"):
-            with st.spinner("ЖИ барлық оқушылардың қателері мен жетістіктерін қорытындылап жатыр..."):
+        if st.button(t("ai_ped_btn")):
+            with st.spinner(t("ai_ped_spin")):
                 try:
                     feedback_records = []
                     for idx_r, r in df_stat.iterrows():
-                        st_name = r.get(student_col, f'Оқушы-{idx_r+1}') if student_col else f'Оқушы-{idx_r+1}'
+                        st_name = r.get(student_col, f'Student-{idx_r+1}') if student_col else f'Student-{idx_r+1}'
                         sc = r.get(score_col, 0)
                         mx = r.get(max_col_name, max_possible) if max_col_name else max_possible
                         fb = r.get(fb_col_name, '') if fb_col_name else ''
-                        feedback_records.append(f"Оқушы: {st_name} | Балл: {sc}/{mx}\nТалдауы:\n{fb}\n---")
+                        feedback_records.append(f"Student: {st_name} | Score: {sc}/{mx}\nFeedback:\n{fb}\n---")
                     
                     combined_data = "\n".join(feedback_records)
 
-                    analysis_prompt = f"""
+                    if st.session_state.lang == "РУС":
+                        analysis_prompt = f"""
+Ты — опытный методист-учитель школ Республики Казахстан, составляющий аналитическую справку по итогам СОР и СОЧ.
+На основе результатов и статистики проверенных работ учащихся напиши официальный педагогический анализ на РУССКОМ языке.
+
+СТАТИСТИКА КЛАССА:
+- Всего учащихся: {total_students}
+- Средний балл: {avg_score:.1f} / {max_possible:.0f}
+- Успеваемость: {passing_rate:.1f}%
+- Качество знаний: {quality_rate:.1f}%
+
+РЕЗУЛЬТАТЫ И ОШИБКИ УЧАЩИХСЯ:
+{combined_data[:12000]}
+
+ТРЕБУЕМАЯ СТРУКТУРА (На русском языке, в официально-деловом педагогическом стиле):
+1. **Достигнутые цели обучения:** Темы, навыки и цели обучения, успешно усвоенные большинством учащихся (🟢).
+2. **Цели обучения, вызвавшие затруднения:** Задания, темы и цели обучения, в которых учащиеся часто допускали ошибки (🔴 и 🟡), с указанием конкретных причин.
+3. **Рекомендации по коррекционной работе:** Конкретные методические рекомендации учителю по устранению пробелов.
+"""
+                        ped_sys = "Вы методист образования РК, составляющий официальный анализ СОР/СОЧ на русском языке."
+                    elif st.session_state.lang == "ENG":
+                        analysis_prompt = f"""
+You are an experienced educational methodologist in the Republic of Kazakhstan preparing an analytical report on BJB and TJB (summative assessment) results.
+Based on the class statistics and student work evaluations below, write a formal pedagogical analysis in ENGLISH.
+
+CLASS STATISTICS:
+- Total students: {total_students}
+- Average score: {avg_score:.1f} / {max_possible:.0f}
+- Passing rate: {passing_rate:.1f}%
+- Quality rate: {quality_rate:.1f}%
+
+STUDENT RESULTS & ERRORS:
+{combined_data[:12000]}
+
+REQUIRED STRUCTURE (In English, formal pedagogical style):
+1. **Achieved Learning Objectives:** Topics, skills, and learning objectives successfully mastered by the majority of students (🟢).
+2. **Challenging Learning Objectives:** Tasks, topics, and learning objectives where students frequently made mistakes (🔴 and 🟡), specifying exact error patterns.
+3. **Corrective Recommendations:** Concrete methodological recommendations for the teacher to address the identified gaps.
+"""
+                        ped_sys = "You are an RK educational methodologist writing an official BJB/TJB analysis in English."
+                    else:
+                        analysis_prompt = f"""
 Сен — Қазақстан Республикасы мектептеріндегі БЖБ және ТЖБ қорытындылары бойынша аналитикалық анықтама дайындайтын тәжірибелі әдіскер-ұстазсың.
 Төмендегі сынып оқушыларының тексерілген жұмыстарының нәтижелері мен статистикасына сүйене отырып, ресми педагогикалық талдау жаз.
 
@@ -600,10 +1018,12 @@ elif menu == "Статистика":
 2. **Қиындық туғызған оқу мақсаттары:** Оқушылар жиі қате жіберген (🔴 және 🟡 белгіленген) тапсырмалар, тақырыптар мен оқу мақсаттары (нақты неден қателескенін көрсет).
 3. **Түзету (коррекциялық) жұмыстары бойынша ұсыныстар:** Қиындық туғызған мақсаттарды жою үшін мұғалімге арналған нақты әдістемелік ұсыныстар.
 """
+                        ped_sys = "Сіз ҚР білім беру стандарты бойынша БЖБ/ТЖБ талдауын жасайтын әдіскерсіз."
+
                     resp = client.chat.completions.create(
                         model="gpt-4o",
                         messages=[
-                            {"role": "system", "content": "Сіз ҚР білім беру стандарты бойынша БЖБ/ТЖБ талдауын жасайтын әдіскерсіз."},
+                            {"role": "system", "content": ped_sys},
                             {"role": "user", "content": analysis_prompt}
                         ],
                         max_tokens=1800,
@@ -611,91 +1031,91 @@ elif menu == "Статистика":
                     )
                     st.session_state.class_ai_analysis = resp.choices[0].message.content
                 except Exception as e:
-                    st.error(f"Талдау жасау кезінде қате шықты: {e}")
+                    st.error(f"Error: {e}")
 
         if st.session_state.class_ai_analysis:
             st.markdown(f"<div class='analysis-box'>{st.session_state.class_ai_analysis}</div>", unsafe_allow_html=True)
             st.text_area(
-                "Көшіріп алуға ыңғайлы мәтін (Word / Kundelik / BilimClass үшін):",
+                t("copy_area_lbl"),
                 value=st.session_state.class_ai_analysis,
                 height=260
             )
 
         st.markdown("---")
-        st.write("### 📥 Есепті жүктеп алу")
+        st.markdown(t("export_hdr"))
         
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df_stat.to_excel(writer, index=False, sheet_name='Оқушылар_нәтижесі')
+            df_stat.to_excel(writer, index=False, sheet_name='Results')
             
             summary_df = pd.DataFrame({
-                "Көрсеткіш": ["Оқушы саны", "Орташа балл", "Үлгерім пайызы (%)", "Білім сапасы (%)", "Педагогикалық талдау"],
-                "Мәні": [
+                "Metric": [t("m_students"), t("m_avg"), t("m_pass"), t("m_qual"), "Pedagogical Analysis"],
+                "Value": [
                     total_students, 
                     round(avg_score, 1), 
                     round(passing_rate, 1), 
                     round(quality_rate, 1),
-                    st.session_state.class_ai_analysis if st.session_state.class_ai_analysis else "Талдау жасалмаған"
+                    st.session_state.class_ai_analysis if st.session_state.class_ai_analysis else "-"
                 ]
             })
-            summary_df.to_excel(writer, index=False, sheet_name='Қорытынды_анализ')
+            summary_df.to_excel(writer, index=False, sheet_name='Summary_Analysis')
             
         excel_data = output.getvalue()
 
         st.download_button(
-            label="📊 Толық есепті Excel форматында жүктеу (.xlsx)",
+            label=t("excel_btn"),
             data=excel_data,
-            file_name="SmartTest_Cynip_Analiz.xlsx",
+            file_name="SmartTest_Class_Analysis.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
-elif menu == "Балансты толтыру":
-    st.subheader("💳 Кредит сатып алу және балансты толтыру")
-    st.write("1 кредит = 100 ₸. Қалаған кредит санын енгізіп, төлем жасаңыз.")
+elif selected_menu_key == "menu_billing":
+    st.subheader(t("billing_sub"))
+    st.write(t("billing_desc"))
     
-    credits_to_buy = st.number_input("Сатып алғыңыз келетін кредит саны:", min_value=1, max_value=1000, value=10, step=1)
+    credits_to_buy = st.number_input(t("credits_buy_lbl"), min_value=1, max_value=1000, value=10, step=1)
     amount = credits_to_buy * 100
     
-    st.markdown(f"**Төленетін жалпы сома:** <span style='color: #10b981; font-size: 20px; font-weight: bold;'>{amount:,.0f} ₸</span>", unsafe_allow_html=True)
+    st.markdown(f"**{t('total_pay_lbl')}** <span style='color: #10b981; font-size: 20px; font-weight: bold;'>{amount:,.0f} ₸</span>", unsafe_allow_html=True)
     
     st.markdown("---")
-    st.info("📱 **Төлем жасау қадамдары:**\n1. Төмендегі QR кодтардың бірін сканерлеңіз;\n2. Соманы аударыңыз;\n3. Төлем чегіндегі транзакция / чек нөмірін енгізіңіз.")
+    st.info(t("pay_steps"))
     
     qr_col1, qr_col2 = st.columns(2)
     with qr_col1:
-        st.write("### 🟡 Kaspi QR арқылы төлеу")
+        st.write("### 🟡 Kaspi QR")
         if os.path.exists("kaspi_qr_ИЗС.png"):
             st.image("kaspi_qr_ИЗС.png", caption="SmartTest — Kaspi Pay QR", width=260)
         else:
-            st.warning("⚠️ `kaspi_qr_ИЗС.png` файлы табылмады.")
+            st.warning("⚠️ `kaspi_qr_ИЗС.png` not found.")
             
     with qr_col2:
-        st.write("### 🟢 Halyk QR арқылы төлеу")
+        st.write("### 🟢 Halyk QR")
         if os.path.exists("halyk_qr_ЫРЫС.png"):
             st.image("halyk_qr_ЫРЫС.png", caption="SmartTest — Halyk QR", width=260)
         else:
-            st.warning("⚠️ `halyk_qr_ЫРЫС.png` суретін жоба папкасына салыңыз.")
+            st.warning("⚠️ `halyk_qr_ЫРЫС.png` not found.")
     
     with st.form("payment_verification_form"):
-        st.write("### Төлемді растау үшін деректерді енгізіңіз:")
-        txn_id = st.text_input("Транзакция / чек нөмірі", placeholder="Операция нөмірін жазыңыз...")
+        st.markdown(t("txn_hdr"))
+        txn_id = st.text_input(t("txn_lbl"), placeholder=t("txn_ph"))
         
-        submit_payment = st.form_submit_button("📤 Төлем туралы хабарлау")
+        submit_payment = st.form_submit_button(t("txn_btn"))
         
         if submit_payment:
             if not txn_id.strip():
-                st.error("❌ Дұрыс транзакция нөмірін енгізіңіз!")
+                st.error(t("txn_err"))
             else:
                 try:
                     add_payment_record(current_user, amount, float(credits_to_buy), txn_id.strip())
-                    st.success(f"✅ Өтінім қабылданды! Тексерілгеннен кейін балансыңызға {credits_to_buy} кредит қосылады.")
+                    st.success(t("txn_ok").format(credits_to_buy))
                 except Exception as e:
-                    st.error(f"Қате орын алды: {e}")
+                    st.error(f"Error: {e}")
 
-elif menu == "Қауіпсіздік":
+elif selected_menu_key == "menu_security":
     if not is_admin:
-        st.error("⛔ Бұл бетке тек әкімші (admin) ғана кіре алады!")
+        st.error(t("sec_denied"))
         st.stop()
 
-    st.subheader("Қауіпсіздік және жүйе күйі")
-    st.write(f"Ағымдағы пайдаланушы: **{current_user}** | Баланс: **{user_balance} кредит** ({total_tenge:,.0f} ₸)")
+    st.subheader(t("sec_sub"))
+    st.write(f"{t('user_lbl')}: **{current_user}** | {t('balance_lbl')}: **{user_balance} {t('credit_unit')}** ({total_tenge:,.0f} ₸)")
