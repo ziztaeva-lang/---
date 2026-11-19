@@ -129,6 +129,12 @@ TRANSLATIONS = {
         "chart_hdr": "### 📈 Оқушылардың аты-жөні бойынша ұпайлары",
         "ai_ped_hdr": "### 🧠 Оқу мақсаттары бойынша автоматты педагогикалық талдау",
         "ai_ped_desc": "БЖБ / ТЖБ қорытынды анықтамасына арналған дайын талдау мәтінін құрастыру:",
+        "subj_lbl": "📚 Пән атауы",
+        "subj_ph": "Мысалы: Информатика / Математика / Қазақ тілі",
+        "class_lbl": "🏫 Сынып",
+        "class_ph": "Мысалы: 6 «А»",
+        "assess_type_lbl": "📝 Бағалау түрі",
+        "assess_options": ["БЖБ №1", "БЖБ №2", "БЖБ №3", "ТЖБ"],
         "ai_ped_btn": "🤖 Қол жеткізген және қиындық туғызған мақсаттарды талдау",
         "ai_ped_spin": "ЖИ барлық оқушылардың қателері мен жетістіктерін қорытындылап жатыр...",
         "copy_area_lbl": "Көшіріп алуға ыңғайлы мәтін (Word / Kundelik / BilimClass үшін):",
@@ -250,6 +256,12 @@ TRANSLATIONS = {
         "chart_hdr": "### 📈 Баллы по ФИО учащихся",
         "ai_ped_hdr": "### 🧠 Автоматический педагогический анализ по целям обучения",
         "ai_ped_desc": "Формирование готового текста анализа для итоговой справки СОР / СОЧ:",
+        "subj_lbl": "📚 Название предмета",
+        "subj_ph": "Например: Информатика / Математика / Русский язык",
+        "class_lbl": "🏫 Класс",
+        "class_ph": "Например: 6 «А»",
+        "assess_type_lbl": "📝 Вид оценивания",
+        "assess_options": ["СОР №1", "СОР №2", "СОР №3", "СОЧ"],
         "ai_ped_btn": "🤖 Анализ достигнутых и вызвавших затруднения целей",
         "ai_ped_spin": "ИИ обобщает ошибки и достижения всех учащихся...",
         "copy_area_lbl": "Удобный для копирования текст (для Word / Kundelik / BilimClass):",
@@ -371,6 +383,12 @@ TRANSLATIONS = {
         "chart_hdr": "### 📈 Scores by Student Name",
         "ai_ped_hdr": "### 🧠 Automated Pedagogical Analysis by Learning Objectives",
         "ai_ped_desc": "Generate a ready-to-use analytical report for BJB / TJB (summative assessments):",
+        "subj_lbl": "📚 Subject Name",
+        "subj_ph": "e.g., Computer Science / Mathematics / English",
+        "class_lbl": "🏫 Grade / Class",
+        "class_ph": "e.g., Grade 6A",
+        "assess_type_lbl": "📝 Assessment Type",
+        "assess_options": ["BJB (SAU) #1", "BJB (SAU) #2", "BJB (SAU) #3", "TJB (SAT)"],
         "ai_ped_btn": "🤖 Analyze Achieved & Challenging Objectives",
         "ai_ped_spin": "AI is summarizing errors and achievements across all students...",
         "copy_area_lbl": "Copy-ready text (for Word / Kundelik / BilimClass):",
@@ -538,31 +556,39 @@ def evaluate_student_work(client, files_list, max_score, lang_code):
 
 ПРАВИЛА ОФОРМЛЕНИЯ:
 1. Используй ту же нумерацию/буквы, что и в работе ученика.
-2. Кратко укажи тему или цель обучения каждого задания и поставь отметку:
+2. Кратко укажи тему, учебную цель или предметное умение каждого задания и поставь отметку:
    - 🟢 [Верно] — если ответ полностью правильный.
    - 🔴 [Ошибка] — если ответ неверный или задание не выполнено.
    - 🟡 [Частично] — если ответ верен частично.
-3. Кратко объясни причину каждой оценки на русском языке.
-4. В самом конце обязательно напиши общий суммарный балл за все страницы в точном формате:
+3. Кратко и содержательно объясни причину каждой оценки на русском языке, избегая механических повторов одинаковых фраз.
+4. Перед итоговым баллом напиши сильный, всесторонний педагогический вывод в МОТИВАЦИОННОМ стиле (2–4 предложения), подходящий для любого учебного предмета:
+   - опирайся на реальный учебный процесс ученика: понимание понятий, логику рассуждений, применение знаний и предметных умений, аккуратность и самостоятельность выполнения заданий;
+   - отметь сильные стороны и точки роста с уважением, поддержкой и верой в успех ученика;
+   - каждый раз подбирай свежие, живые и разные формулировки, не повторяя штампы от работы к работе.
+5. В самом конце обязательно напиши общий суммарный балл за все страницы в точном формате:
    Итоговый балл: X/{int(max_score)}
 """
-        sys_msg = "Вы эксперт-учитель, проверяющий работы учащихся по стандартам образования РК на русском языке."
+        sys_msg = "Вы эксперт-педагог, проверяющий работы учащихся по стандартам образования РК на русском языке в поддерживающем, содержательном и мотивационном ключе."
     elif lang_code == "ENG":
         prompt_text = f"""
-You are an experienced expert teacher well-versed in the State Educational Standards of the Republic of Kazakhstan and the criteria-based assessment system (Orders No. 399, No. 125, and No. 348).
+You are an experienced expert teacher well-versed in the State Educational Standards of the Republic of Kazakhstan and the criteria-based assessment system (Orders No. 399, No. 348, and No. 125).
 You are presented with the work of ONE student consisting of {total_pages} page(s). Carefully examine ALL pages as a single unified work. Identify all tasks and sub-items across all pages and grade each one individually.
 
 GRADING & FORMATTING RULES:
 1. Keep the same numbering/lettering as written in the student's work.
-2. Briefly state the topic or learning objective of each task and assign a status tag:
+2. Briefly state the topic, learning objective, or subject skill of each task and assign a status tag:
    - 🟢 [Correct] — if the answer is completely correct.
    - 🔴 [Incorrect] — if the answer is wrong or missing.
    - 🟡 [Partial] — if the answer is partially correct.
-3. Briefly explain the reason for each grade in English.
-4. At the very end, strictly write the combined total score across all pages in this exact format:
+3. Briefly and clearly explain the reason for each grade in English, avoiding repetitive phrasing across items.
+4. Right before the final score, write a strong, comprehensive pedagogical concluding remark in a MOTIVATIONAL style (2–4 sentences), suitable for any school subject:
+   - reflect the student's actual learning process: conceptual grasp, reasoning and argumentation, application of knowledge and subject skills, attentiveness, and effort;
+   - frame strengths and areas for improvement constructively, warmly, and encouragingly;
+   - vary your wording and imagery each time so every student receives a fresh, authentic message.
+5. At the very end, strictly write the combined total score across all pages in this exact format:
    Total score: X/{int(max_score)}
 """
-        sys_msg = "You are an expert teacher grading student works according to RK educational standards in English."
+        sys_msg = "You are an expert educator grading student works according to RK educational standards in English with a comprehensive, encouraging, and varied pedagogical voice."
     else:
         prompt_text = f"""
 Сен — Қазақстан Республикасының орта білім беру стандарты мен критериалды бағалау жүйесін жеттік білетін тәжірибелі сарапшы-ұстазсың. №399, №125 және №348 бұйрықтардың талаптары мен дескрипторларды қатаң басшылыққа ал.
@@ -570,15 +596,19 @@ GRADING & FORMATTING RULES:
 
 ТАРМАҚТАРДЫ БЕЛГІЛЕУ ЕРЕЖЕСІ:
 1. Жұмыста қалай жазылған болса, сол форматты қолдан: қазақша әріптер (а, ә, б, в, г) немесе латын әріптері (a, b, c, d).
-2. Әрбір тапсырманың тақырыбын немесе оқу мақсатын (егер бетте жазылған болса немесе мазмұнынан анықталса) қысқаша көрсетіп, сәйкес белгі қой:
+2. Әрбір тапсырманың тақырыбын, оқу мақсатын немесе пәндік дағдысын қысқаша көрсетіп, сәйкес белгі қой:
    - 🟢 [Дұрыс] — жауап толық дұрыс болса.
    - 🔴 [Қате] — жауап қате немесе орындалмаған болса.
    - 🟡 [Жартылай] — жартылай дұрыс болса.
-3. Әр бағалаудың себебін қысқаша түсіндіріп жаз.
-4. Соңында барлық беттер бойынша ортақ қорытынды балды міндетті түрде мына форматта жаз:
+3. Әр бағалаудың себебін түсіндіргенде сөз саптауды бірсарынды қайталамай, әр тапсырманың оқу мақсаты мен мазмұнына сай нақты әрі түсінікті жаз.
+4. Қорытынды балдың алдында **педагогикалық тілмен, оқу процесін жан-жақты қамтитын, кез келген пәнге сай әрі МОТИВАЦИЯЛЫҚ стильдегі** салмақты қорытынды сөз (2–4 сөйлем) жаз:
+   - оқу процесінің қырларын (ұғымдарды меңгеру тереңдігі, ой жүйелілігі мен дәлелдеу, білімді тәжірибеде қолдану, тапсырмаға ұқыптылық пен ізденіс) тұтас қамты;
+   - оқушының жетістігін лайықты бағалап, ал қателік жіберген тұстарын сүріну емес, өсу нүктесі ретінде көрсетіп, оқуға деген сенімі мен ынтасын көтер;
+   - әр жұмыс сайын сөздер мен тіркестерді түрлендіріп, жаттанды немесе қайталанбалы сөздерге жол берме.
+5. Соңында барлық беттер бойынша ортақ қорытынды балды міндетті түрде мына форматта жаз:
    Жиынтық балл: X/{int(max_score)}
 """
-        sys_msg = "Сіз ҚР білім беру стандартына сай оқушы жұмыстарын тексеретін ұстазсыз."
+        sys_msg = "Сіз ҚР білім беру стандартына сай оқушы жұмыстарын тексеретін, педагогикалық шеберлігі жоғары, әр оқушыға әртүрлі сөзбен, жан-жақты әрі мотивациялық қорытынды жасайтын ұстазсыз."
 
     messages_content = [{"type": "text", "text": prompt_text}]
     for img_b64 in images_b64:
@@ -594,7 +624,7 @@ GRADING & FORMATTING RULES:
             {"role": "user", "content": messages_content}
         ],
         max_tokens=2500,
-        temperature=0.1
+        temperature=0.4
     )
     
     full_ai_resp = response.choices[0].message.content
@@ -663,6 +693,7 @@ price_per_credit = 100
 total_tenge = user_balance * price_per_credit
 
 user_role = get_user_role(current_user)
+user_default_subject = get_user_subject(current_user) or ""
 is_admin = (user_role == "admin" or current_user.lower() in ["zoya", "admin"])
 
 st.sidebar.title("SmartTest")
@@ -1298,6 +1329,28 @@ elif selected_menu_key == "menu_stats":
         st.markdown(t("ai_ped_hdr"))
         st.write(t("ai_ped_desc"))
 
+        # --- ПӘН, СЫНЫП ЖӘНЕ БАҒАЛАУ ТҮРІН ТАҢДАУ ӨРІСТЕРІ ---
+        meta_c1, meta_c2, meta_c3 = st.columns(3)
+        with meta_c1:
+            subject_name = st.text_input(
+                t("subj_lbl"),
+                value=user_default_subject,
+                placeholder=t("subj_ph"),
+                key="stats_subject_name"
+            )
+        with meta_c2:
+            class_name = st.text_input(
+                t("class_lbl"),
+                placeholder=t("class_ph"),
+                key="stats_class_name"
+            )
+        with meta_c3:
+            assess_type = st.selectbox(
+                t("assess_type_lbl"),
+                t("assess_options"),
+                key="stats_assess_type"
+            )
+
         if "class_ai_analysis" not in st.session_state:
             st.session_state.class_ai_analysis = ""
 
@@ -1314,10 +1367,20 @@ elif selected_menu_key == "menu_stats":
                     
                     combined_data = "\n".join(feedback_records)
 
+                    clean_subj = subject_name.strip()
+                    clean_class = class_name.strip()
+
                     if st.session_state.lang == "РУС":
+                        subj_disp = clean_subj if clean_subj else "Не указан"
+                        class_disp = clean_class if clean_class else "Не указан"
                         analysis_prompt = f"""
 Ты — опытный методист-учитель школ Республики Казахстан, составляющий аналитическую справку по итогам СОР и СОЧ.
-На основе результатов и статистики проверенных работ учащихся напиши официальный педагогический анализ на РУССКОМ языке.
+На основе статистики и проверенных работ учащихся напиши глубокий, всесторонний педагогический анализ на РУССКОМ языке в ПОДДЕРЖИВАЮЩЕМ и МОТИВАЦИОННОМ стиле, избегая шаблонных клише и повторяющихся формулировок.
+
+ОБЩИЕ СВЕДЕНИЯ:
+- Предмет: {subj_disp}
+- Класс: {class_disp}
+- Вид оценивания: {assess_type}
 
 СТАТИСТИКА КЛАССА:
 - Всего учащихся: {total_students}
@@ -1328,16 +1391,25 @@ elif selected_menu_key == "menu_stats":
 РЕЗУЛЬТАТЫ И ОШИБКИ УЧАЩИХСЯ:
 {combined_data[:12000]}
 
-ТРЕБУЕМАЯ СТРУКТУРА (На русском языке, в официально-деловом педагогическом стиле):
-1. **Достигнутые цели обучения:** Темы, навыки и цели обучения, успешно усвоенные большинством учащихся (🟢).
-2. **Цели обучения, вызвавшие затруднения:** Задания, темы и цели обучения, в которых учащиеся часто допускали ошибки (🔴 и 🟡), с указанием конкретных причин.
-3. **Рекомендации по коррекционной работе:** Конкретные методические рекомендации учителю по устранению пробелов.
+ТРЕБУЕМАЯ СТРУКТУРА (В начале документа обязательно укажи заголовок с предметом, классом и видом оценивания — {assess_type}):
+**Аналитическая справка по итогам {assess_type} по предмету «{subj_disp}» ({class_disp} класс)**
+
+1. **Достигнутые цели обучения:** Темы, понятия, навыки и цели обучения, успешно освоенные учащимися (🟢), с опорой на понимание материала, логику и самостоятельность.
+2. **Цели обучения, вызвавшие затруднения:** Учебные цели и умения, где учащиеся встретили трудности (🔴 и 🟡), с анализом причин ошибок и восприятием их как точек роста.
+3. **Рекомендации по коррекционной работе и мотивационный вывод:** Конкретные методические шаги для развития предметных умений и ободряющий, вдохновляющий педагогический итог о потенциале {class_disp} класса и движении вперед.
 """
-                        ped_sys = "Вы методист образования РК, составляющий официальный анализ СОР/СОЧ на русском языке."
+                        ped_sys = "Вы эксперт-методист образования РК, составляющий всесторонний, живой и мотивационный педагогический анализ результатов обучения на русском языке без шаблонных повторов."
                     elif st.session_state.lang == "ENG":
+                        subj_disp = clean_subj if clean_subj else "Not specified"
+                        class_disp = clean_class if clean_class else "Not specified"
                         analysis_prompt = f"""
-You are an experienced educational methodologist in the Republic of Kazakhstan preparing an analytical report on BJB and TJB (summative assessment) results.
-Based on the class statistics and student work evaluations below, write a formal pedagogical analysis in ENGLISH.
+You are an experienced educational methodologist in the Republic of Kazakhstan preparing a comprehensive analytical summary of BJB and TJB (summative assessment) results.
+Based on the class statistics and graded student works below, write a thorough pedagogical analysis in ENGLISH using a constructive, encouraging, and MOTIVATIONAL tone, varying your phrasing so it never sounds repetitive or formulaic.
+
+GENERAL INFORMATION:
+- Subject: {subj_disp}
+- Class / Grade: {class_disp}
+- Assessment Type: {assess_type}
 
 CLASS STATISTICS:
 - Total students: {total_students}
@@ -1348,16 +1420,25 @@ CLASS STATISTICS:
 STUDENT RESULTS & ERRORS:
 {combined_data[:12000]}
 
-REQUIRED STRUCTURE (In English, formal pedagogical style):
-1. **Achieved Learning Objectives:** Topics, skills, and learning objectives successfully mastered by the majority of students (🟢).
-2. **Challenging Learning Objectives:** Tasks, topics, and learning objectives where students frequently made mistakes (🔴 and 🟡), specifying exact error patterns.
-3. **Corrective Recommendations:** Concrete methodological recommendations for the teacher to address the identified gaps.
+REQUIRED STRUCTURE (Start the report with a clear header showing the subject, class, and assessment type — {assess_type}):
+**Analytical Report on {assess_type} Results in {subj_disp} ({class_disp})**
+
+1. **Achieved Learning Objectives:** Concepts, topics, reasoning skills, and learning objectives successfully mastered by students (🟢).
+2. **Challenging Learning Objectives:** Learning objectives and skills where students faced difficulties (🔴 and 🟡), explaining why gaps occurred and framing them as growth opportunities.
+3. **Corrective Recommendations & Motivational Conclusion:** Practical teaching steps to strengthen learning and an uplifting, motivating pedagogical closing highlighting the potential of {class_disp} and forward momentum.
 """
-                        ped_sys = "You are an RK educational methodologist writing an official BJB/TJB analysis in English."
+                        ped_sys = "You are an RK educational methodologist writing comprehensive, encouraging, and varied motivational pedagogical analyses in English."
                     else:
+                        subj_disp = clean_subj if clean_subj else "Көрсетілмеген"
+                        class_disp = clean_class if clean_class else "Көрсетілмеген"
                         analysis_prompt = f"""
-Сен — Қазақстан Республикасы мектептеріндегі БЖБ және ТЖБ қорытындылары бойынша аналитикалық анықтама дайындайтын тәжірибелі әдіскер-ұстазсың.
-Төмендегі сынып оқушыларының тексерілген жұмыстарының нәтижелері мен статистикасына сүйене отырып, ресми педагогикалық талдау жаз.
+Сен — Қазақстан Республикасы мектептеріндегі БЖБ және ТЖБ қорытындылары бойынша жан-жақты педагогикалық талдау дайындайтын тәжірибелі әдіскер-ұстазсың.
+Төмендегі сынып оқушыларының тексерілген жұмыстарының нәтижелері мен статистикасына сүйене отырып, **педагогикалық тілмен**, **оқу процесін тұтас қамтитын**, **жігерлендіретін МОТИВАЦИЯЛЫҚ стильде** және **әр жолы әртүрлі, жаттанды емес, бай сөздермен** талдау жаз.
+
+ЖАЛПЫ МӘЛІМЕТТЕР:
+- Пән атауы: {subj_disp}
+- Сынып: {class_disp}
+- Бағалау түрі: {assess_type}
 
 СЫНЫП СТАТИСТИКАСЫ:
 - Барлық оқушы саны: {total_students}
@@ -1368,12 +1449,14 @@ REQUIRED STRUCTURE (In English, formal pedagogical style):
 ОҚУШЫЛАРДЫҢ ЖҰМЫС НӘТИЖЕЛЕРІ МЕН ҚАТЕЛЕРІ:
 {combined_data[:12000]}
 
-ТАЛАП ЕТІЛЕТІН ҚҰРЫЛЫМ (Қазақ тілінде, ресми іскерлік-педагогикалық стильде):
-1. **Қол жеткізген оқу мақсаттары:** Оқушылардың басым бөлігі (🟢 белгіленген) сәтті меңгерген тақырыптар, дағдылар мен оқу мақсаттары.
-2. **Қиындық туғызған оқу мақсаттары:** Оқушылар жиі қате жіберген (🔴 және 🟡 белгіленген) тапсырмалар, тақырыптар мен оқу мақсаттары (нақты неден қателескенін көрсет).
-3. **Түзету (коррекциялық) жұмыстары бойынша ұсыныстар:** Қиындық туғызған мақсаттарды жою үшін мұғалімге арналған нақты әдістемелік ұсыныстар.
+ТАЛАП ЕТІЛЕТІН ҚҰРЫЛЫМ (Талдаудың ең басында пән атауын, сыныпты және бағалау түрін — {assess_type} міндетті түрде ресми тақырып ретінде көрсет):
+**«{subj_disp}» пәні бойынша {class_disp} сыныптың {assess_type} қорытындысына педагогикалық талдау**
+
+1. **Қол жеткізген оқу мақсаттары:** Оқу процесінде {class_disp} сынып оқушыларының (🟢 белгіленген) сәтті меңгерген ұғымдары, тақырыптары, ойлау жүйелілігі мен пәндік дағдылары.
+2. **Қиындық туғызған оқу мақсаттары:** Оқушыларға әзірге күрделілік туғызған (🔴 және 🟡 белгіленген) мақсаттар мен дағдылар — қателіктердің себебін талдап, оларды сыныптың алға жылжуына бағытталған өсу нүктесі ретінде көрсет.
+3. **Түзету (коррекциялық) жұмыстары және мотивациялық қорытынды:** Оқу нәтижесін нығайтуға арналған нақты әдістемелік қадамдар және {class_disp} сынып оқушыларының ізденісі мен мүмкіндігіне сенім білдіретін, оқуға ынталандыратын, әсерлі педагогикалық қорытынды сөз. Әр талдауда сөз саптауды түрлендіріп, бірсарынды клишелерді қайталама.
 """
-                        ped_sys = "Сіз ҚР білім беру стандарты бойынша БЖБ/ТЖБ талдауын жасайтын әдіскерсіз."
+                        ped_sys = "Сіз ҚР білім беру стандарты бойынша оқу процесін жан-жақты қамтитын, мотивациялық стильдегі, әр жолы әртүрлі әрі мазмұнды педагогикалық талдау жасайтын әдіскерсіз."
 
                     resp = client.chat.completions.create(
                         model="gpt-4o",
@@ -1382,7 +1465,7 @@ REQUIRED STRUCTURE (In English, formal pedagogical style):
                             {"role": "user", "content": analysis_prompt}
                         ],
                         max_tokens=1800,
-                        temperature=0.2
+                        temperature=0.4
                     )
                     st.session_state.class_ai_analysis = resp.choices[0].message.content
                 except Exception as e:
@@ -1420,6 +1503,9 @@ REQUIRED STRUCTURE (In English, formal pedagogical style):
             
             summary_df = pd.DataFrame({
                 "Көрсеткіш": [
+                    "Пән атауы",
+                    "Сынып",
+                    "Бағалау түрі",
                     "Оқушы саны", 
                     "Орташа балл", 
                     "Үлгерім пайызы (%)", 
@@ -1427,6 +1513,9 @@ REQUIRED STRUCTURE (In English, formal pedagogical style):
                     "Педагогикалық талдау"
                 ],
                 "Мәні": [
+                    subject_name.strip() if subject_name.strip() else "Көрсетілмеген",
+                    class_name.strip() if class_name.strip() else "Көрсетілмеген",
+                    assess_type,
                     total_students, 
                     round(avg_score, 1), 
                     round(passing_rate, 1), 
@@ -1438,10 +1527,16 @@ REQUIRED STRUCTURE (In English, formal pedagogical style):
             
         excel_data = output.getvalue()
 
+        safe_subj = re.sub(r'[^\w\-]', '_', subject_name.strip()) if subject_name.strip() else ""
+        safe_class = re.sub(r'[^\w\-]', '_', class_name.strip()) if class_name.strip() else ""
+        safe_type = re.sub(r'[^\w\-]', '_', assess_type.strip())
+        file_parts = [p for p in ["SmartTest", safe_subj, safe_class, safe_type, "талдауы"] if p]
+        excel_filename = "_".join(file_parts) + ".xlsx"
+
         st.download_button(
             label=t("excel_btn"),
             data=excel_data,
-            file_name="SmartTest_Сынып_талдауы.xlsx",
+            file_name=excel_filename,
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
