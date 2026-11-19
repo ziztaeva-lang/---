@@ -5,7 +5,6 @@ import pandas as pd
 import io
 import os
 import re
-import fitz  # PyMuPDF кітапханасы (PDF-ті суретке айналдыру үшін)
 from openai import OpenAI
 from security_layer import (
     init_db, save_pending_result, get_pending_results, 
@@ -13,6 +12,12 @@ from security_layer import (
     get_user_credits, deduct_credit, verify_user, add_payment_record,
     get_user_role, get_user_subject, clear_all_results
 )
+
+# PyMuPDF (fitz) — PDF-ті суретке айналдыру үшін (орнатылмаса да қосымша құламайды)
+try:
+    import fitz
+except ImportError:
+    fitz = None
 
 # iPhone .HEIC / .HEIF форматтарын қолдау
 try:
@@ -83,6 +88,7 @@ TRANSLATIONS = {
         "status_pending": "⏳ Күтілуде",
         "work_lbl": "Жұмыс №",
         "pdf_loaded": "📄 PDF құжаты жүктелді ({} бет). Барлық бет бірге тексеріледі (1 кредит).",
+        "pdf_missing_lib": "⚠️ PDF файлдарды өңдеу үшін `requirements.txt` файлына `pymupdf` қосып, қосымшаны қайта іске қосыңыз.",
         "img_err": "Суретті ашу мүмкін болмады.",
         "student_name_lbl": "👤 Оқушының аты-жөнін енгізіңіз *",
         "student_name_ph": "Мысалы: Асанов Алихан",
@@ -203,6 +209,7 @@ TRANSLATIONS = {
         "status_pending": "⏳ Ожидает",
         "work_lbl": "Работа №",
         "pdf_loaded": "📄 Загружен PDF документ ({} стр.). Все страницы проверяются вместе (1 кредит).",
+        "pdf_missing_lib": "⚠️ Для обработки PDF добавьте `pymupdf` в `requirements.txt` и перезапустите приложение.",
         "img_err": "Не удалось открыть изображение.",
         "student_name_lbl": "👤 Введите ФИО ученика *",
         "student_name_ph": "Например: Асанов Алихан",
@@ -323,6 +330,7 @@ TRANSLATIONS = {
         "status_pending": "⏳ Pending",
         "work_lbl": "Work #",
         "pdf_loaded": "📄 PDF document uploaded ({} pages). All pages graded together (1 credit).",
+        "pdf_missing_lib": "⚠️ To process PDF files, add `pymupdf` to `requirements.txt` and reboot the app.",
         "img_err": "Unable to open image.",
         "student_name_lbl": "👤 Enter Student Full Name *",
         "student_name_ph": "e.g., Alikhan Asanov",
@@ -477,10 +485,13 @@ def count_pages_in_files(files_list):
     total = 0
     for f in files_list:
         if f.name.lower().endswith(".pdf"):
-            try:
-                doc = fitz.open(stream=f.getvalue(), filetype="pdf")
-                total += len(doc)
-            except Exception:
+            if fitz is not None:
+                try:
+                    doc = fitz.open(stream=f.getvalue(), filetype="pdf")
+                    total += len(doc)
+                except Exception:
+                    total += 1
+            else:
                 total += 1
         else:
             total += 1
@@ -492,6 +503,8 @@ def process_uploaded_files_list(files_list):
     for uploaded_file in files_list:
         file_bytes = uploaded_file.getvalue()
         if uploaded_file.name.lower().endswith(".pdf"):
+            if fitz is None:
+                raise RuntimeError(t("pdf_missing_lib"))
             pdf_document = fitz.open(stream=file_bytes, filetype="pdf")
             for page_num in range(len(pdf_document)):
                 page = pdf_document[page_num]
@@ -694,6 +707,8 @@ if selected_menu_key == "menu_home":
 
 elif selected_menu_key == "menu_check":
     st.subheader(t("check_sub"))
+    if fitz is None:
+        st.warning(t("pdf_missing_lib"))
     
     # --- 3 ЖҮКТЕУ РЕЖИМІН ТАҢДАУ ---
     upload_mode = st.radio(
