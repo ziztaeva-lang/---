@@ -117,6 +117,9 @@ TRANSLATIONS = {
         "no_results": "Әзірге нәтиже жоқ.",
         "stats_sub": "📊 Сыныптың статистикасы мен педагогикалық талдау",
         "no_stats": "Әзірге бекітілген нәтижелер жоқ. Статистика шығару үшін жұмыстарды тексеріп, бекітіңіз.",
+        "subj_filter_lbl": "🗂️ Пән бойынша сүзгі (бөлек пәнді таңдаңыз):",
+        "subj_map_exp": "🔧 Жұмыстардың пәнін нақтылау / өзгерту (егер автоматты тану дәл болмаса)",
+        "subj_col_lbl": "Пәні",
         "col_student": "Оқушы аты-жөні",
         "col_score": "Бекітілген ұпай",
         "col_max": "Максималды балл",
@@ -130,13 +133,13 @@ TRANSLATIONS = {
         "ai_ped_hdr": "### 🧠 Оқу мақсаттары бойынша автоматты педагогикалық талдау",
         "ai_ped_desc": "БЖБ / ТЖБ қорытынды анықтамасына арналған дайын талдау мәтінін құрастыру:",
         "subj_lbl": "📚 Пән атауы",
-        "subj_ph": "Мысалы: Информатика / Математика / Қазақ тілі",
+        "subj_ph": "Мысалы: Информатика / Биология",
         "class_lbl": "🏫 Сынып",
         "class_ph": "Мысалы: 6 «А»",
         "assess_type_lbl": "📝 Бағалау түрі",
         "assess_options": ["БЖБ №1", "БЖБ №2", "БЖБ №3", "ТЖБ"],
         "ai_ped_btn": "🤖 Қол жеткізген және қиындық туғызған мақсаттарды талдау",
-        "ai_ped_spin": "ЖИ барлық оқушылардың қателері мен жетістіктерін қорытындылап жатыр...",
+        "ai_ped_spin": "ЖИ таңдалған пән бойынша қателері мен жетістіктерін қорытындылап жатыр...",
         "copy_area_lbl": "Көшіріп алуға ыңғайлы мәтін (Word / Kundelik / BilimClass үшін):",
         "export_hdr": "### 📥 Есепті жүктеп алу",
         "excel_btn": "📊 Толық есепті Excel форматында жүктеу (.xlsx)",
@@ -244,6 +247,9 @@ TRANSLATIONS = {
         "no_results": "Пока нет результатов.",
         "stats_sub": "📊 Статистика класса и педагогический анализ",
         "no_stats": "Пока нет утвержденных результатов. Для вывода статистики проверьте и утвердите работы.",
+        "subj_filter_lbl": "🗂️ Фильтр по предмету (выберите отдельный предмет):",
+        "subj_map_exp": "🔧 Уточнить / изменить предмет для работ (если автоопределение неточно)",
+        "subj_col_lbl": "Предмет",
         "col_student": "ФИО ученика",
         "col_score": "Утвержденный балл",
         "col_max": "Максимальный балл",
@@ -257,13 +263,13 @@ TRANSLATIONS = {
         "ai_ped_hdr": "### 🧠 Автоматический педагогический анализ по целям обучения",
         "ai_ped_desc": "Формирование готового текста анализа для итоговой справки СОР / СОЧ:",
         "subj_lbl": "📚 Название предмета",
-        "subj_ph": "Например: Информатика / Математика / Русский язык",
+        "subj_ph": "Например: Информатика / Биология",
         "class_lbl": "🏫 Класс",
         "class_ph": "Например: 6 «А»",
         "assess_type_lbl": "📝 Вид оценивания",
         "assess_options": ["СОР №1", "СОР №2", "СОР №3", "СОЧ"],
         "ai_ped_btn": "🤖 Анализ достигнутых и вызвавших затруднения целей",
-        "ai_ped_spin": "ИИ обобщает ошибки и достижения всех учащихся...",
+        "ai_ped_spin": "ИИ обобщает ошибки и достижения учащихся по выбранному предмету...",
         "copy_area_lbl": "Удобный для копирования текст (для Word / Kundelik / BilimClass):",
         "export_hdr": "### 📥 Скачать отчет",
         "excel_btn": "📊 Скачать полный отчет в формате Excel (.xlsx)",
@@ -371,6 +377,9 @@ TRANSLATIONS = {
         "no_results": "No results yet.",
         "stats_sub": "📊 Class Statistics and Pedagogical Analysis",
         "no_stats": "No approved results yet. Grade and approve works to view statistics.",
+        "subj_filter_lbl": "🗂️ Filter by Subject (select an individual subject):",
+        "subj_map_exp": "🔧 Assign / override subject for works (if auto-detection needs adjustment)",
+        "subj_col_lbl": "Subject",
         "col_student": "Student Full Name",
         "col_score": "Approved Score",
         "col_max": "Max Score",
@@ -384,13 +393,13 @@ TRANSLATIONS = {
         "ai_ped_hdr": "### 🧠 Automated Pedagogical Analysis by Learning Objectives",
         "ai_ped_desc": "Generate a ready-to-use analytical report for BJB / TJB (summative assessments):",
         "subj_lbl": "📚 Subject Name",
-        "subj_ph": "e.g., Computer Science / Mathematics / English",
+        "subj_ph": "e.g., Computer Science / Biology",
         "class_lbl": "🏫 Grade / Class",
         "class_ph": "e.g., Grade 6A",
         "assess_type_lbl": "📝 Assessment Type",
         "assess_options": ["BJB (SAU) #1", "BJB (SAU) #2", "BJB (SAU) #3", "TJB (SAT)"],
         "ai_ped_btn": "🤖 Analyze Achieved & Challenging Objectives",
-        "ai_ped_spin": "AI is summarizing errors and achievements across all students...",
+        "ai_ped_spin": "AI is summarizing errors and achievements for the selected subject...",
         "copy_area_lbl": "Copy-ready text (for Word / Kundelik / BilimClass):",
         "export_hdr": "### 📥 Download Report",
         "excel_btn": "📊 Download Full Report in Excel (.xlsx)",
@@ -419,6 +428,38 @@ if "lang" not in st.session_state:
 
 def t(key):
     return TRANSLATIONS[st.session_state.lang].get(key, key)
+
+# --- ПӘНДІ АВТОМАТТЫ АНЫҚТАУ КӨМЕКШІ ФУНКЦИЯСЫ ---
+def detect_subject_from_row(row_dict, fallback_subject=""):
+    if "subject" in row_dict and str(row_dict["subject"]).strip():
+        return str(row_dict["subject"]).strip()
+
+    combined_txt = " ".join(str(v) for v in row_dict.values() if v is not None).lower()
+
+    bio_keywords = [
+        "биология", "жасуша", "фотосинтез", "экожүйе", "ағза", "өсімдік", "жануар",
+        "генетика", "днқ", "тұқымқуалаушылық", "анатомия", "биосфера", "митоз", "мейоз",
+        "биологиялық", "клетка", "фотосинтез", "экосистема", "организм", "растение",
+        "животное", "biology", "cell", "photosynthesis", "ecosystem", "organism"
+    ]
+    inf_keywords = [
+        "информатика", "алгоритм", "программалау", "бағдарламалау", "код", "python",
+        "scratch", "блок-схема", "блок схема", "деректер", "компьютер", "желі",
+        "растрлық", "векторлық", "ақпараттық", "цикл", "айнымалы", "информатика",
+        "алгоритм", "программирование", "код", "данные", "компьютер", "сеть",
+        "computer science", "informatics", "algorithm", "programming", "code"
+    ]
+
+    bio_hits = sum(1 for kw in bio_keywords if kw in combined_txt)
+    inf_hits = sum(1 for kw in inf_keywords if kw in combined_txt)
+
+    if bio_hits > inf_hits and bio_hits > 0:
+        return "Биология"
+    if inf_hits > bio_hits and inf_hits > 0:
+        return "Информатика"
+    if fallback_subject and fallback_subject.strip():
+        return fallback_subject.strip()
+    return "Анықталмаған пән"
 
 # --- ЗАМАНАУИ МИНИМАЛИЗМ CSS СТИЛЬДЕРІ МЕН БЕЛГІЛЕР ---
 st.markdown("""
@@ -571,7 +612,7 @@ def evaluate_student_work(client, files_list, max_score, lang_code):
         sys_msg = "Вы эксперт-педагог, проверяющий работы учащихся по стандартам образования РК на русском языке в поддерживающем, содержательном и мотивационном ключе."
     elif lang_code == "ENG":
         prompt_text = f"""
-You are an experienced expert teacher well-versed in the State Educational Standards of the Republic of Kazakhstan and the criteria-based assessment system (Orders No. 399, No. 348, and No. 125).
+You are an experienced expert teacher well-versed in the State Educational Standards of the Republic of Kazakhstan and the criteria-based assessment system (Orders No. 399, No. 125, and No. 348).
 You are presented with the work of ONE student consisting of {total_pages} page(s). Carefully examine ALL pages as a single unified work. Identify all tasks and sub-items across all pages and grade each one individually.
 
 GRADING & FORMATTING RULES:
@@ -741,7 +782,6 @@ elif selected_menu_key == "menu_check":
     if fitz is None:
         st.warning(t("pdf_missing_lib"))
     
-    # --- 3 ЖҮКТЕУ РЕЖИМІН ТАҢДАУ ---
     upload_mode = st.radio(
         t("mode_lbl"),
         ["multi_students", "single_student", "camera_mode"],
@@ -759,9 +799,6 @@ elif selected_menu_key == "menu_check":
         step=1.0
     )
 
-    # =========================================================================
-    # РЕЖИМ 3: КАМЕРАМЕН БІРНЕШЕ БЕТТІ ҚАТАРЫНАН СУРЕТКЕ ТҮСІРУ (1 КРЕДИТ)
-    # =========================================================================
     if upload_mode == "camera_mode":
         if "camera_pages" not in st.session_state:
             st.session_state.camera_pages = []
@@ -889,9 +926,6 @@ elif selected_menu_key == "menu_check":
         else:
             st.info(t("cam_empty_info"))
 
-    # =========================================================================
-    # РЕЖИМ 1 ЖӘНЕ РЕЖИМ 2: ФАЙЛ ЖҮКТЕУ (JPG, PNG, HEIC, PDF)
-    # =========================================================================
     else:
         uploader_prompt = t("upload_lbl") if upload_mode == "multi_students" else t("upload_single_lbl")
         uploaded_files = st.file_uploader(
@@ -901,7 +935,6 @@ elif selected_menu_key == "menu_check":
         )
         
         if uploaded_files:
-            # --- РЕЖИМ 2: БАРЛЫҚ ЖҮКТЕЛГЕН СУРЕТТЕР / БЕТТЕР = 1 ОҚУШЫ (1 КРЕДИТ) ---
             if upload_mode == "single_student":
                 total_p = count_pages_in_files(uploaded_files)
                 st.success(t("uploaded_single_ok").format(len(uploaded_files), total_p))
@@ -1005,7 +1038,6 @@ elif selected_menu_key == "menu_check":
                         else:
                             st.error(t("save_name_err"))
 
-            # --- РЕЖИМ 1: ӘР ФАЙЛ (КӨПБЕТТІ PDF НЕМЕСЕ СУРЕТ) = 1 ЖЕКЕ ОҚУШЫ ---
             else:
                 st.success(t("uploaded_ok").format(len(uploaded_files)))
                 
@@ -1218,6 +1250,18 @@ elif selected_menu_key == "menu_stats":
     if not rows:
         st.info(t("no_stats"))
     else:
+        # Әр жазбаға пән анықтау және қолмен нақтылауға мүмкіндік беру
+        detected_subjects = []
+        raw_dicts = []
+        for idx_row, r in enumerate(rows):
+            r_dict = r if isinstance(r, dict) else {i: v for i, v in enumerate(r)}
+            raw_dicts.append(r_dict)
+            auto_subj = detect_subject_from_row(r_dict, user_default_subject)
+            subj_override_key = f"row_subj_override_{idx_row}"
+            if subj_override_key not in st.session_state:
+                st.session_state[subj_override_key] = auto_subj
+            detected_subjects.append(st.session_state[subj_override_key])
+
         df_stat = pd.DataFrame(rows)
         
         if all(isinstance(c, int) for c in df_stat.columns):
@@ -1283,25 +1327,61 @@ elif selected_menu_key == "menu_stats":
             st.error("Кестеден ұпай бағаны табылмады.")
             st.stop()
 
-        df_stat[score_col] = pd.to_numeric(df_stat[score_col], errors='coerce').fillna(0.0)
+        subj_col_name = "Пәні"
+        df_stat[subj_col_name] = detected_subjects
+
+        # Жұмыстардың пәнін қолмен нақтылауға арналған ықшам панель
+        with st.expander(t("subj_map_exp"), expanded=False):
+            subj_choices = ["Биология", "Информатика", "Математика", "Физика", "Химия", "Қазақ тілі", "Ағылшын тілі", "Анықталмаған пән"]
+            for idx_row in range(len(df_stat)):
+                st_label = str(df_stat.loc[idx_row, student_col]) if student_col else f"Жұмыс #{idx_row+1}"
+                sc_label = df_stat.loc[idx_row, score_col]
+                cur_s = st.session_state[f"row_subj_override_{idx_row}"]
+                opts = list(dict.fromkeys([cur_s] + subj_choices))
+                new_s = st.selectbox(
+                    f"{idx_row+1}. {st_label} ({sc_label} балл)",
+                    opts,
+                    index=0,
+                    key=f"row_subj_select_{idx_row}"
+                )
+                if new_s != cur_s:
+                    st.session_state[f"row_subj_override_{idx_row}"] = new_s
+                    st.rerun()
+
+        # Пән бойынша сүзгі (әр пәнді жеке-жеке қарау үшін)
+        unique_subjects = list(dict.fromkeys(df_stat[subj_col_name].tolist()))
+        filter_options = unique_subjects + ["Барлық пәндер (ортақ)"]
+        selected_subj_filter = st.selectbox(
+            t("subj_filter_lbl"),
+            filter_options,
+            index=0,
+            key="stats_selected_subject_filter"
+        )
+
+        if selected_subj_filter != "Барлық пәндер (ортақ)":
+            df_filtered = df_stat[df_stat[subj_col_name] == selected_subj_filter].copy()
+        else:
+            df_filtered = df_stat.copy()
+
+        df_filtered[score_col] = pd.to_numeric(df_filtered[score_col], errors='coerce').fillna(0.0)
         
-        total_students = len(df_stat)
-        avg_score = df_stat[score_col].mean()
+        total_students = len(df_filtered)
+        avg_score = df_filtered[score_col].mean() if total_students > 0 else 0.0
         pct_col_name = "Пайыздық көрсеткіш (%)"
         
-        if max_col_name and max_col_name in df_stat.columns:
-            df_stat[max_col_name] = pd.to_numeric(df_stat[max_col_name], errors='coerce').fillna(10.0)
-            max_possible = df_stat[max_col_name].mean()
-            df_stat[pct_col_name] = (df_stat[score_col] / df_stat[max_col_name].replace(0, 10.0)) * 100
+        if max_col_name and max_col_name in df_filtered.columns:
+            df_filtered[max_col_name] = pd.to_numeric(df_filtered[max_col_name], errors='coerce').fillna(10.0)
+            max_possible = df_filtered[max_col_name].mean() if total_students > 0 else 10.0
+            df_filtered[pct_col_name] = (df_filtered[score_col] / df_filtered[max_col_name].replace(0, 10.0)) * 100
         else:
             max_possible = 10.0
-            df_stat[pct_col_name] = (df_stat[score_col] / max_possible) * 100
+            df_filtered[pct_col_name] = (df_filtered[score_col] / max_possible) * 100
 
-        passing_count = len(df_stat[df_stat[pct_col_name] >= 40])
-        quality_count = len(df_stat[df_stat[pct_col_name] >= 65])
+        passing_count = len(df_filtered[df_filtered[pct_col_name] >= 40])
+        quality_count = len(df_filtered[df_filtered[pct_col_name] >= 65])
             
-        passing_rate = (passing_count / total_students) * 100
-        quality_rate = (quality_count / total_students) * 100
+        passing_rate = (passing_count / total_students) * 100 if total_students > 0 else 0.0
+        quality_rate = (quality_count / total_students) * 100 if total_students > 0 else 0.0
 
         col1, col2, col3, col4 = st.columns(4)
         col1.metric(t("m_students"), f"{total_students}")
@@ -1311,32 +1391,33 @@ elif selected_menu_key == "menu_stats":
 
         st.markdown("---")
         st.markdown(t("chart_hdr"))
-        if student_col and student_col in df_stat.columns:
-            df_stat[student_col] = df_stat[student_col].astype(str)
-            if df_stat[student_col].duplicated().any():
-                df_stat[student_col] = df_stat[student_col] + " (" + (df_stat.groupby(student_col).cumcount() + 1).astype(str) + ")"
-            st.bar_chart(df_stat.set_index(student_col)[score_col])
+        if student_col and student_col in df_filtered.columns:
+            df_filtered[student_col] = df_filtered[student_col].astype(str)
+            if df_filtered[student_col].duplicated().any():
+                df_filtered[student_col] = df_filtered[student_col] + " (" + (df_filtered.groupby(student_col).cumcount() + 1).astype(str) + ")"
+            st.bar_chart(df_filtered.set_index(student_col)[score_col])
             
-            display_cols = [student_col, score_col]
+            display_cols = [student_col, subj_col_name, score_col]
             if max_col_name:
                 display_cols.append(max_col_name)
             display_cols.append(pct_col_name)
-            st.dataframe(df_stat[display_cols], use_container_width=True)
+            st.dataframe(df_filtered[display_cols], use_container_width=True)
         else:
-            st.bar_chart(df_stat[score_col])
+            st.bar_chart(df_filtered[score_col])
 
         st.markdown("---")
         st.markdown(t("ai_ped_hdr"))
         st.write(t("ai_ped_desc"))
 
-        # --- ПӘН, СЫНЫП ЖӘНЕ БАҒАЛАУ ТҮРІН ТАҢДАУ ӨРІСТЕРІ ---
+        default_subj_input = selected_subj_filter if selected_subj_filter != "Барлық пәндер (ортақ)" else user_default_subject
+
         meta_c1, meta_c2, meta_c3 = st.columns(3)
         with meta_c1:
             subject_name = st.text_input(
                 t("subj_lbl"),
-                value=user_default_subject,
+                value=default_subj_input,
                 placeholder=t("subj_ph"),
-                key="stats_subject_name"
+                key=f"stats_subject_name_{selected_subj_filter}"
             )
         with meta_c2:
             class_name = st.text_input(
@@ -1358,12 +1439,13 @@ elif selected_menu_key == "menu_stats":
             with st.spinner(t("ai_ped_spin")):
                 try:
                     feedback_records = []
-                    for idx_r, r in df_stat.iterrows():
+                    for idx_r, r in df_filtered.iterrows():
                         st_name = r.get(student_col, f'Оқушы-{idx_r+1}') if student_col else f'Оқушы-{idx_r+1}'
+                        s_item = r.get(subj_col_name, '')
                         sc = r.get(score_col, 0)
                         mx = r.get(max_col_name, max_possible) if max_col_name else max_possible
                         fb = r.get(fb_col_name, '') if fb_col_name else ''
-                        feedback_records.append(f"Оқушы: {st_name} | Балл: {sc}/{mx}\nТалдауы:\n{fb}\n---")
+                        feedback_records.append(f"Оқушы: {st_name} | Пән: {s_item} | Балл: {sc}/{mx}\nТалдауы:\n{fb}\n---")
                     
                     combined_data = "\n".join(feedback_records)
 
@@ -1382,7 +1464,7 @@ elif selected_menu_key == "menu_stats":
 - Класс: {class_disp}
 - Вид оценивания: {assess_type}
 
-СТАТИСТИКА КЛАССА:
+СТАТИСТИКА ПО ВЫБРАННОМУ ПРЕДМЕТУ:
 - Всего учащихся: {total_students}
 - Средний балл: {avg_score:.1f} / {max_possible:.0f}
 - Успеваемость: {passing_rate:.1f}%
@@ -1411,7 +1493,7 @@ GENERAL INFORMATION:
 - Class / Grade: {class_disp}
 - Assessment Type: {assess_type}
 
-CLASS STATISTICS:
+STATISTICS FOR SELECTED SUBJECT:
 - Total students: {total_students}
 - Average score: {avg_score:.1f} / {max_possible:.0f}
 - Passing rate: {passing_rate:.1f}%
@@ -1433,14 +1515,14 @@ REQUIRED STRUCTURE (Start the report with a clear header showing the subject, cl
                         class_disp = clean_class if clean_class else "Көрсетілмеген"
                         analysis_prompt = f"""
 Сен — Қазақстан Республикасы мектептеріндегі БЖБ және ТЖБ қорытындылары бойынша жан-жақты педагогикалық талдау дайындайтын тәжірибелі әдіскер-ұстазсың.
-Төмендегі сынып оқушыларының тексерілген жұмыстарының нәтижелері мен статистикасына сүйене отырып, **педагогикалық тілмен**, **оқу процесін тұтас қамтитын**, **жігерлендіретін МОТИВАЦИЯЛЫҚ стильде** және **әр жолы әртүрлі, жаттанды емес, бай сөздермен** талдау жаз.
+Төмендегі таңдалған пән бойынша оқушылардың тексерілген жұмыстарының нәтижелері мен статистикасына сүйене отырып, **педагогикалық тілмен**, **оқу процесін тұтас қамтитын**, **жігерлендіретін МОТИВАЦИЯЛЫҚ стильде** және **әр жолы әртүрлі, жаттанды емес, бай сөздермен** талдау жаз.
 
 ЖАЛПЫ МӘЛІМЕТТЕР:
 - Пән атауы: {subj_disp}
 - Сынып: {class_disp}
 - Бағалау түрі: {assess_type}
 
-СЫНЫП СТАТИСТИКАСЫ:
+ТАҢДАЛҒАН ПӘН БОЙЫНША СТАТИСТИКА:
 - Барлық оқушы саны: {total_students}
 - Орташа балл: {avg_score:.1f} / {max_possible:.0f}
 - Үлгерім пайызы: {passing_rate:.1f}%
@@ -1483,18 +1565,19 @@ REQUIRED STRUCTURE (Start the report with a clear header showing the subject, cl
         st.markdown(t("export_hdr"))
         
         export_cols = []
-        if student_col and student_col in df_stat.columns:
+        if student_col and student_col in df_filtered.columns:
             export_cols.append(student_col)
-        if score_col and score_col in df_stat.columns:
+        export_cols.append(subj_col_name)
+        if score_col and score_col in df_filtered.columns:
             export_cols.append(score_col)
-        if max_col_name and max_col_name in df_stat.columns:
+        if max_col_name and max_col_name in df_filtered.columns:
             export_cols.append(max_col_name)
-        if pct_col_name in df_stat.columns:
+        if pct_col_name in df_filtered.columns:
             export_cols.append(pct_col_name)
-        if fb_col_name and fb_col_name in df_stat.columns:
+        if fb_col_name and fb_col_name in df_filtered.columns:
             export_cols.append(fb_col_name)
 
-        df_export_students = df_stat[export_cols].copy() if export_cols else df_stat.copy()
+        df_export_students = df_filtered[export_cols].copy() if export_cols else df_filtered.copy()
         df_export_students[pct_col_name] = df_export_students[pct_col_name].round(1)
 
         output = io.BytesIO()
